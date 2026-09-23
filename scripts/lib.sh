@@ -5,7 +5,7 @@ SLUG_RE='^[a-z0-9-]+$'
 
 refuse() { echo "refused: $*"; exit 1; }
 
-# Copy template $1 to $2, filling <area>, <slug>, <date> from env AREA, SLUG, DATE,
+# Copy template $1 to $2, filling <area>, <slug>, <date>, <title> from env,
 # and replacing the Ask placeholder line with env ASK when it is set.
 fill() {
   mkdir -p "$(dirname "$2")"
@@ -19,6 +19,7 @@ fill() {
     {
       s = sub_all($0, "<area>", ENVIRON["AREA"])
       s = sub_all(s, "<slug>", ENVIRON["SLUG"])
+      s = sub_all(s, "<title>", ENVIRON["TITLE"])
       print sub_all(s, "<date>", ENVIRON["DATE"])
     }' "$1" > "$2"
 }

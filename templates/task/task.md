@@ -1,4 +1,4 @@
-# <slug>
+# <title>
 
 Area: <area>
 Created: <date>

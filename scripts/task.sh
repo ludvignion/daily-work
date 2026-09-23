@@ -1,44 +1,46 @@
 #!/usr/bin/env bash
-# Create a task folder. Reads the raw arguments on stdin: "[area] <slug> [ask...]".
-# One word is a slug in _inbox; two or more are area, slug, then the Ask.
-# To give an Ask to an _inbox task, name the area: "_inbox <slug> <ask>".
+# task.sh <slug>, with stdin: the title on line 1, then the text the user typed.
+# The text becomes the Ask; "--area <name>" in it files the task under that area
+# instead of areas/_inbox/.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
-ltrim() { local s=$1; printf '%s' "${s#"${s%%[![:space:]]*}"}"; }
-s=$(ltrim "$(cat)")
-w1=${s%%[[:space:]]*}
-r=$(ltrim "${s#"$w1"}")
-w2=${r%%[[:space:]]*}
-ASK=$(ltrim "${r#"$w2"}"); ASK=${ASK%"${ASK##*[![:space:]]}"}
-if [ -z "$w2" ]; then AREA=_inbox SLUG=$w1; else AREA=$w1 SLUG=$w2; fi
+SLUG=${1:-}
+IFS= read -r TITLE || true
+RAW=$(cat)
+AREA=_inbox
+if [[ $RAW =~ (^|[[:space:]])--area[[:space:]]+([^[:space:]]+) ]]; then
+  AREA=${BASH_REMATCH[2]}
+  RAW=${RAW/"${BASH_REMATCH[0]}"/}
+fi
+ASK=$(sed 's/^[[:space:]]*//; s/[[:space:]]*$//' <<< "$RAW")
 
-[ -n "$SLUG" ] || refuse "usage: /daily-work:task [area] <slug> [ask]"
+[ -n "$ASK" ] || refuse "usage: /daily-work:task <what the task is> [--area <name>]"
 [[ $SLUG =~ $SLUG_RE ]] || refuse "slug '$SLUG' has characters outside [a-z0-9-]; nothing created"
 [[ $AREA == _inbox || $AREA =~ $SLUG_RE ]] || refuse "area '$AREA' has characters outside [a-z0-9-]; nothing created"
 [ -d areas ] || refuse "no areas/ here; run /daily-work:init first"
+TITLE=${TITLE:-$SLUG}
 
 DATE=${DAILY_WORK_DATE:-$(date +%F)}
 A=areas/$AREA
 T=$A/tasks/$DATE-$SLUG
 [ -e "$T" ] && refuse "$T already exists; nothing created"
-export AREA SLUG DATE ASK
+export AREA SLUG DATE ASK TITLE
 
+new_area=
 for f in README.md sources.md; do
-  [ -e "$A/$f" ] || { fill "$TEMPLATES/area/$f" "$A/$f"; echo "$A/$f: created"; }
+  [ -e "$A/$f" ] || { fill "$TEMPLATES/area/$f" "$A/$f"; new_area=1; }
 done
-[ -e "$A/reference/.gitkeep" ] || { mkdir -p "$A/reference"; : > "$A/reference/.gitkeep"; echo "$A/reference/.gitkeep: created"; }
+[ -e "$A/reference/.gitkeep" ] || { mkdir -p "$A/reference"; : > "$A/reference/.gitkeep"; }
+[ -n "$new_area" ] && [ "$AREA" != _inbox ] && echo "New area: $A/"
 
 mkdir -p "$T/inputs" "$T/outputs"
 : > "$T/inputs/.gitkeep"; : > "$T/outputs/.gitkeep"
 fill "$TEMPLATES/task/task.md" "$T/task.md"
-echo "$T/: created with task.md, inputs/, outputs/"
-
 add_under "$A/README.md" "## Tasks" "- $DATE $SLUG: open"
-echo "$A/README.md: added \"- $DATE $SLUG: open\""
-if ! grep -qE "^- $AREA(:|\$)" README.md 2>/dev/null; then
-  add_under README.md "## Areas" "- $AREA"
-  echo "README.md: added \"- $AREA\""
-fi
+grep -qE "^- $AREA(:|\$)" README.md 2>/dev/null || add_under README.md "## Areas" "- $AREA"
 
-echo "Next: write the Ask in $T/task.md, then follow ## Before answering in CLAUDE.md"
+echo "Task: $TITLE"
+echo "File: $T/task.md"
+echo "Put source files in $T/inputs/"
+echo "Next: /grill-with-docs on $T/task.md to write the Spec, or tell Claude to work on it if the Ask is already clear"

@@ -1,6 +1,6 @@
 {
   "name": "daily-work",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Structure for ad-hoc white-collar work in a repo: areas, task folders, and a record of what was done. Three skills: init, task, record.",
   "author": { "name": "ludvignion" },
   "license": "MIT"
