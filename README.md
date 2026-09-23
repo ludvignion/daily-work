@@ -8,42 +8,51 @@ what was done. Nothing here builds software.
 
 Local filesystem and git only. No network calls. The plugin never opens `.env`.
 
-## Requires: Matt Pocock's grill-with-docs
+## Setup
+
+Everything below happens in your **work repo**, the repo where you do daily work, not in this
+plugin's repo.
+
+**1. Install the daily-work plugin** (once per machine; from a terminal):
+
+```
+claude plugin marketplace add ludvignion/daily-work
+claude plugin install daily-work@daily-work
+```
+
+To update later: `claude plugin marketplace update daily-work`, then
+`claude plugin update daily-work@daily-work`, then restart Claude Code.
+
+**2. Create the work repo and set it up** (once per work repo):
+
+```
+mkdir ~/workspace/<work repo> && cd ~/workspace/<work repo>
+claude
+/daily-work:init
+```
+
+**3. Add Matt Pocock's grill-with-docs to the work repo** (once per work repo):
 
 The grilling step uses Matt Pocock's `grill-with-docs` skill from
-[mattpocock/skills](https://github.com/mattpocock/skills), which in turn calls his `grilling`
-and `domain-modeling` skills. daily-work does not ship or call them; install them yourself.
-
-Install them with skills.sh, so the files are copied into your repo and stay at the version
-you took:
+[mattpocock/skills](https://github.com/mattpocock/skills), which calls his `grilling` and
+`domain-modeling` skills. daily-work does not ship or call them. In the work repo:
 
 ```
 npx skills@latest add mattpocock/skills
+git add -A && git commit -m "Add Matt Pocock's grill skills"
 ```
 
-Pick `grill-with-docs`, `grilling`, `domain-modeling` and `setup-matt-pocock-skills`, then
-commit the copied files. That pins them: an open change in that repo renames `CONTEXT.md` to
-`GLOSSARY.md`, and the `CLAUDE.md` this plugin generates reads `CONTEXT.md`.
+In the installer, pick `grill-with-docs`, `grilling`, `domain-modeling` and
+`setup-matt-pocock-skills`, for Claude Code, in the project. Committing the copied files pins
+them: an open change in his repo renames `CONTEXT.md` to `GLOSSARY.md`, and the `CLAUDE.md`
+this plugin generates reads `CONTEXT.md`.
 
 His Claude Code plugin (`claude plugin install mattpocock-skills`) also works, but it updates
-itself, so it cannot be pinned, and its skill is called `/mattpocock-skills:grill-with-docs`
+itself, so it cannot be pinned, and its command is `/mattpocock-skills:grill-with-docs`
 instead of `/grill-with-docs`.
 
-## Install
-
-```
-/plugin marketplace add ludvignion/daily-work
-/plugin install daily-work@daily-work
-```
-
-To update after a new version is pushed: `/plugin marketplace update daily-work`, then
-restart Claude Code. To try a local checkout instead: `claude --plugin-dir /path/to/daily-work`.
-
-Then, in the repo you keep for daily work:
-
-```
-/daily-work:init
-```
+To try a local checkout of daily-work instead of step 1: `claude --plugin-dir
+/path/to/daily-work`.
 
 ## The per-task loop
 

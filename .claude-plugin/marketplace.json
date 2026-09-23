@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "daily-work: areas, briefs grilled into tasks, and a record of what was done.",
-    "version": "0.4.3"
+    "version": "0.4.4"
   },
   "plugins": [
     {
       "name": "daily-work",
       "source": "./",
       "description": "Structure for ad-hoc white-collar work: brief, grill, task, record.",
-      "version": "0.4.3",
+      "version": "0.4.4",
       "category": "workflow",
       "keywords": [
         "tasks",
