@@ -18,7 +18,7 @@ TITLE=${TITLE:-$SLUG}
 A=areas/$AREA
 F=$A/briefs/$SLUG.md
 [ -e "$F" ] && refuse "$F already exists; nothing created"
-compgen -G "$A/tasks/*-$SLUG" >/dev/null && refuse "a task named $SLUG already exists in $A/tasks/; pick another name"
+[ -e "$A/tasks/$SLUG" ] && refuse "a task named $SLUG already exists in $A/tasks/; pick another name"
 export AREA SLUG DATE ASK TITLE
 
 if [ ! -e "$A/README.md" ]; then

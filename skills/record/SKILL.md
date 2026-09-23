@@ -1,12 +1,12 @@
 ---
 name: record
 description: >-
-  /daily-work:record [areas/<area>/tasks/<date>-<slug>]. Record a finished task: write
+  /daily-work:record [areas/<area>/tasks/<slug>]. Record a finished task: write
   ## Result and ## Caveats in its task.md from outputs/ and the conversation, add missing
   sources to the area's sources.md, mark the area README line done, commit, and list the Done
   lines a person still has to check. With no argument, list open tasks and stop.
 disable-model-invocation: true
-argument-hint: "[areas/<area>/tasks/<date>-<slug>]"
+argument-hint: "[areas/<area>/tasks/<slug>]"
 ---
 
 # Record

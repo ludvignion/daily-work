@@ -31,12 +31,11 @@ Then, in the repo you keep for daily work:
    existing one), and the plugin writes `areas/techseed/briefs/uns-mockup.md` and shows it.
 2. **Grill.** `/grill-with-docs areas/techseed/briefs/uns-mockup.md`. The grilling settles
    what the task is. When it ends, the generated CLAUDE.md has Claude turn the brief into
-   `areas/techseed/tasks/<today>-uns-mockup/task.md`: your text as the Ask, what was settled
-   as the Spec. If that did not happen, run `/daily-work:task` on the brief.
-   A brief that is already clear can skip grilling and go straight to `/daily-work:task`.
+   `areas/techseed/tasks/uns-mockup/task.md`: your text as the Ask, what was settled as the
+   Spec.
 3. **Work.** Tell Claude to work on the task folder. Client files go in `inputs/`; what the
    task produces, code included, goes in `outputs/`.
-4. **Record.** `/daily-work:record areas/techseed/tasks/<date>-uns-mockup` writes Result and
+4. **Record.** `/daily-work:record areas/techseed/tasks/uns-mockup` writes Result and
    Caveats, marks the task done in the area README, commits, and lists the Done lines a
    person still has to check.
 
@@ -53,7 +52,7 @@ areas/
     briefs/
       uns-mockup.md           a description waiting to be grilled
     tasks/
-      2026-09-23-uns-mockup/
+      uns-mockup/
         task.md               heading, Ask, Spec, Result, Caveats
         brief.md              the brief it came from
         inputs/               client files (not committed)
@@ -63,7 +62,7 @@ tools/                        code used by two or more tasks
 
 ## Skills
 
-All four are user-invoked only.
+All three are user-invoked only.
 
 - **`/daily-work:init [dir]`** — creates `CLAUDE.md`, `README.md`, `.gitignore`,
   `.env.example`, `pyproject.toml`, `areas/` and `tools/`, and runs `git init` if the
@@ -73,10 +72,6 @@ All four are user-invoked only.
 - **`/daily-work:brief [area] <describe the task>`** — writes the description to
   `areas/<area>/briefs/<slug>.md`, creating the area (`README.md`, `sources.md`,
   `reference/`) and its line under `## Areas` if new, and prints the brief.
-- **`/daily-work:task <brief>`** — turns a brief into a task folder with `task.md`, `inputs/`
-  and `outputs/`, moves the brief in as `brief.md`, adds `- <date> <slug>: open` under
-  `## Tasks` in the area README, and writes anything settled in the conversation into the
-  Spec. A grilling session normally does this itself; this is the fallback.
 - **`/daily-work:record [task folder]`** — fills `## Result` and `## Caveats` from `outputs/`
   and the conversation, adds any missing source to the area's `sources.md`, changes the README
   line to `- <date> <slug>: done, <one line>`, commits `daily-work: record <slug>`, and prints
@@ -90,9 +85,9 @@ python-docx, pypdf and python-dotenv for `uv`; edit it to suit.
 ## Using it with grill-with-docs
 
 daily-work is meant to sit next to Matt Pocock's `grill-with-docs` skill, which needs the
-`grilling` and `domain-modeling` skills installed. daily-work never calls them and works
-without them: the generated `CLAUDE.md` tells a grilling session to turn the brief into a task,
-and `/daily-work:task` does the same by hand.
+`grilling` and `domain-modeling` skills installed. daily-work never calls them, and
+its skills work without them. The generated `CLAUDE.md` is what tells a grilling session to
+turn the brief into a task.
 
 Pin the versions of `grilling`, `domain-modeling` and `grill-with-docs` you install. An open
 change renames `CONTEXT.md` to `GLOSSARY.md`, and the generated `CLAUDE.md` reads

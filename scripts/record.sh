@@ -11,8 +11,8 @@ if [ "${1:-}" = list ]; then
   for f in areas/*/README.md; do
     [ -f "$f" ] || continue
     a=$(basename "$(dirname "$f")")
-    while read -r _ d s; do
-      echo "areas/$a/tasks/$d-${s%:}"; n=$((n + 1))
+    while read -r _ _ s; do
+      echo "areas/$a/tasks/${s%:}"; n=$((n + 1))
     done < <(grep -E '^- [0-9]{4}-[0-9]{2}-[0-9]{2} [a-z0-9-]+: open$' "$f" || true)
   done
   [ "$n" -gt 0 ] || echo "no open tasks"
@@ -22,13 +22,12 @@ fi
 MODE=${1:-}; T=${2:-}
 [[ $MODE == begin || $MODE == finish ]] || refuse "usage: record.sh list | begin <task> | finish <task>"
 T=${T%/}; T=${T#"$PWD/"}; T=${T#./}
-[[ $T =~ ^areas/([^/]+)/tasks/([0-9]{4}-[0-9]{2}-[0-9]{2})-([a-z0-9-]+)$ ]] \
-  || refuse "'$T' is not areas/<area>/tasks/<date>-<slug>"
-AREA=${BASH_REMATCH[1]} DATE=${BASH_REMATCH[2]} SLUG=${BASH_REMATCH[3]}
+[[ $T =~ ^areas/([^/]+)/tasks/([a-z0-9-]+)$ ]] || refuse "'$T' is not areas/<area>/tasks/<slug>"
+AREA=${BASH_REMATCH[1]} SLUG=${BASH_REMATCH[2]}
 A=areas/$AREA
 [ -f "$T/task.md" ] || refuse "$T/task.md not found"
 GIT_DIR=$(git rev-parse --git-dir 2>/dev/null) || refuse "not a git repo"
-SNAP=$GIT_DIR/daily-work/$DATE-$SLUG.spec
+SNAP=$GIT_DIR/daily-work/$AREA-$SLUG.spec
 
 ask_spec() { awk '/^## Ask$/ { on = 1 } /^## (Result|Caveats)$/ { on = 0 } on' "$T/task.md"; }
 
@@ -47,9 +46,13 @@ grep -qF '<written by /daily-work:record>' "$T/task.md" && refuse "## Result or 
 SUM=$(tr '\n' ' ' | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//')
 [ -n "$SUM" ] || refuse "no one-line summary on stdin"
 
+# Keep the date already on the README line; a task without one takes its Created date.
+RE="^- ([0-9]{4}-[0-9]{2}-[0-9]{2}) $SLUG:"
+DATE=$(grep -oE "$RE" "$A/README.md" | head -1 | cut -d' ' -f2)
+[ -n "$DATE" ] || DATE=$(sed -n 's/^Created: //p' "$T/task.md" | head -1)
 LINE="- $DATE $SLUG: done, $SUM"
-if grep -qE "^- $DATE $SLUG:" "$A/README.md"; then
-  P="- $DATE $SLUG:" LINE="$LINE" awk 'index($0, ENVIRON["P"]) == 1 { print ENVIRON["LINE"]; next } { print }' \
+if grep -qE "$RE" "$A/README.md"; then
+  RE="$RE" LINE="$LINE" awk '$0 ~ ENVIRON["RE"] { print ENVIRON["LINE"]; next } { print }' \
     "$A/README.md" > "$A/README.md.tmp" && mv "$A/README.md.tmp" "$A/README.md"
 else
   add_under "$A/README.md" "## Tasks" "$LINE"

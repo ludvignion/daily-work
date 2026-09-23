@@ -11,7 +11,7 @@ if it has one, then the task's task.md.
 ## Where things go
 Work belongs to an area: areas/<area>/, a client, a system or a recurring responsibility.
 A brief is a person's description of a task, in areas/<area>/briefs/<slug>.md. A task is a
-brief made clear enough to work on, in areas/<area>/tasks/<date>-<slug>/ with task.md,
+brief made clear enough to work on, in areas/<area>/tasks/<slug>/ with task.md,
 inputs/ and outputs/. Client files go in inputs/ or the area's reference/ and are never
 committed. What the task produces, code included, goes in outputs/ and is committed. A method
 used twice becomes a skill in .claude/skills/. A script used once stays in the task's
@@ -28,7 +28,7 @@ when the ask is larger than one sitting. Otherwise the clarify line is enough.
 
 ## After a grilling session on a brief
 Before ending, turn the brief into a task:
-1. Create areas/<area>/tasks/<today>-<slug>/ with task.md, inputs/.gitkeep and
+1. Create areas/<area>/tasks/<slug>/ with task.md, inputs/.gitkeep and
    outputs/.gitkeep. Use the same slug as the brief.
 2. In task.md, keep the layout of the other task.md files: the brief's heading as the title,
    the brief's text unchanged under ## Ask, and what was settled under ## Spec: Done lines,
@@ -36,7 +36,6 @@ Before ending, turn the brief into a task:
 3. Add "- <today> <slug>: open" under ## Tasks in the area's README.md.
 4. Move the brief into the task folder as brief.md.
 5. Show the path of task.md.
-If the session ends before this, /daily-work:task on the brief does steps 1, 3 and 4.
 
 ## After a grilling session on a task
 Write what was settled into that task's task.md under Spec: Done lines, Decided as stated or
