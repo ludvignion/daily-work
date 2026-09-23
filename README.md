@@ -2,10 +2,32 @@
 
 A Claude Code plugin that gives a repo a structure for ad-hoc white-collar work: reading decks,
 evaluating documents, pulling and checking numbers, writing memos. Work is grouped in areas (a
-client, a system, a recurring responsibility). A person describes a task in a brief; grilling
-turns the brief into a task Claude can work on; the plugin records what was done. Nothing here builds software.
+client, a system, a recurring responsibility). A person describes a task in a brief; Matt Pocock's
+`/grill-with-docs` skill grills the brief into a task Claude can work on; the plugin records
+what was done. Nothing here builds software.
 
 Local filesystem and git only. No network calls. The plugin never opens `.env`.
+
+## Requires: Matt Pocock's grill-with-docs
+
+The grilling step uses Matt Pocock's `grill-with-docs` skill from
+[mattpocock/skills](https://github.com/mattpocock/skills), which in turn calls his `grilling`
+and `domain-modeling` skills. daily-work does not ship or call them; install them yourself.
+
+Install them with skills.sh, so the files are copied into your repo and stay at the version
+you took:
+
+```
+npx skills@latest add mattpocock/skills
+```
+
+Pick `grill-with-docs`, `grilling`, `domain-modeling` and `setup-matt-pocock-skills`, then
+commit the copied files. That pins them: an open change in that repo renames `CONTEXT.md` to
+`GLOSSARY.md`, and the `CLAUDE.md` this plugin generates reads `CONTEXT.md`.
+
+His Claude Code plugin (`claude plugin install mattpocock-skills`) also works, but it updates
+itself, so it cannot be pinned, and its skill is called `/mattpocock-skills:grill-with-docs`
+instead of `/grill-with-docs`.
 
 ## Install
 
@@ -31,8 +53,9 @@ Then, in the repo you keep for daily work:
    heading and a file name, and asks for the area if you did not name an existing one. You
    approve or correct it; only then is the task folder `areas/techseed/tasks/uns-mockup/`
    created, holding `brief.md`, `inputs/` and `outputs/`.
-2. **Grill.** `/grill-with-docs areas/techseed/tasks/uns-mockup/brief.md`. The grilling
-   settles what the task is. When it ends, the generated CLAUDE.md has Claude replace
+2. **Grill.** `/grill-with-docs areas/techseed/tasks/uns-mockup/brief.md` (Matt Pocock's
+   skill). It interviews you until the task is clear, and records terms in `CONTEXT.md` and
+   decisions in `docs/adr/`. When it ends, the generated CLAUDE.md has Claude replace
    `brief.md` with `task.md` in the same folder: the brief as the Ask, what was settled as
    the Spec.
 3. **Work.** Tell Claude to work on the task folder. Client files go in `inputs/`; what the
@@ -85,15 +108,10 @@ All three are user-invoked only.
 tracked. `pyproject.toml` lists pandas, openpyxl, python-pptx,
 python-docx, pypdf and python-dotenv for `uv`; edit it to suit.
 
-## Using it with grill-with-docs
+## What daily-work does and does not do with grill-with-docs
 
-daily-work is meant to sit next to Matt Pocock's `grill-with-docs` skill, which needs the
-`grilling` and `domain-modeling` skills installed. daily-work never calls them, and
-its skills work without them. The generated `CLAUDE.md` is what tells a grilling session to
-turn the brief into a task.
-
-Pin the versions of `grilling`, `domain-modeling` and `grill-with-docs` you install. An open
-change renames `CONTEXT.md` to `GLOSSARY.md`, and the generated `CLAUDE.md` reads
-`CONTEXT.md`; an unpinned update would leave the glossary where Claude no longer looks.
-
-This plugin never creates or edits `CONTEXT.md`, `CONTEXT-MAP.md` or `docs/adr/`.
+- It never calls, wraps or edits Matt Pocock's skills, and its own skills work without them.
+- The generated `CLAUDE.md` is what makes a grilling session end by turning `brief.md` into
+  `task.md`.
+- It never creates or edits `CONTEXT.md`, `CONTEXT-MAP.md` or `docs/adr/`; those belong to
+  `grill-with-docs`.
