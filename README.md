@@ -10,6 +10,9 @@ Local filesystem and git only. No network calls. The plugin never opens `.env`.
 
 ## Setup
 
+New to Claude Code, or on a computer without it? Start with
+[GETTING-STARTED.md](GETTING-STARTED.md).
+
 Everything below happens in your **work repo**, the repo where you do daily work, not in this
 plugin's repo.
 
