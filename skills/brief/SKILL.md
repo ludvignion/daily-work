@@ -3,7 +3,7 @@ name: brief
 description: >-
   /daily-work:brief [area] <describe the task>. Rewrite a person's description of a task into
   a clear brief, show it for the person to verify, then write it to
-  areas/<area>/briefs/<slug>.md, ready for /grill-with-docs, creating the area if new.
+  areas/<area>/tasks/<slug>/brief.md, ready for /grill-with-docs, creating the area if new.
 disable-model-invocation: true
 argument-hint: "[area] <describe the task>"
 ---

@@ -6,7 +6,7 @@ SLUG_RE='^[a-z0-9-]+$'
 refuse() { echo "refused: $*"; exit 1; }
 
 # Copy template $1 to $2, filling <area>, <slug>, <date>, <title> from env,
-# and replacing the Ask or <description> placeholder line with env ASK.
+# and replacing the <description> placeholder line with env ASK.
 fill() {
   mkdir -p "$(dirname "$2")"
   awk '
@@ -15,7 +15,6 @@ fill() {
       while ((i = index(s, tok)) > 0) { out = out substr(s, 1, i - 1) val; s = substr(s, i + length(tok)) }
       return out s
     }
-    $0 == "<What was asked, by whom, by when, in the asker'\''s words.>" && ENVIRON["ASK"] != "" { print ENVIRON["ASK"]; next }
     $0 == "<description>" { print ENVIRON["ASK"]; next }
     {
       s = sub_all($0, "<area>", ENVIRON["AREA"])

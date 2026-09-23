@@ -29,11 +29,12 @@ Then, in the repo you keep for daily work:
    `/daily-work:brief techseed I want to help my colleague visualise different options of a UNS structure …`
    Claude rewrites it into a clear brief (no additions, open points left open), with a
    heading and a file name, and asks for the area if you did not name an existing one. You
-   approve or correct it; only then is `areas/techseed/briefs/uns-mockup.md` written.
-2. **Grill.** `/grill-with-docs areas/techseed/briefs/uns-mockup.md`. The grilling settles
-   what the task is. When it ends, the generated CLAUDE.md has Claude turn the brief into
-   `areas/techseed/tasks/uns-mockup/task.md`: your text as the Ask, what was settled as the
-   Spec.
+   approve or correct it; only then is the task folder `areas/techseed/tasks/uns-mockup/`
+   created, holding `brief.md`, `inputs/` and `outputs/`.
+2. **Grill.** `/grill-with-docs areas/techseed/tasks/uns-mockup/brief.md`. The grilling
+   settles what the task is. When it ends, the generated CLAUDE.md has Claude replace
+   `brief.md` with `task.md` in the same folder: the brief as the Ask, what was settled as
+   the Spec.
 3. **Work.** Tell Claude to work on the task folder. Client files go in `inputs/`; what the
    task produces, code included, goes in `outputs/`.
 4. **Record.** `/daily-work:record areas/techseed/tasks/uns-mockup` writes Result and
@@ -49,13 +50,12 @@ areas/
   techseed/
     README.md                 ## Tasks: one line per task, open or done
     sources.md                where facts come from, and which source wins
-    reference/                client files for the area (not committed)
-    briefs/
-      uns-mockup.md           a description waiting to be grilled
     tasks/
-      uns-mockup/
+      uns-mockup/             not grilled yet
+        brief.md              the verified description
+        inputs/  outputs/
+      q3-numbers/             grilled
         task.md               heading, Ask, Spec, Result, Caveats
-        brief.md              the brief it came from
         inputs/               client files (not committed)
         outputs/              what was produced, code included (committed)
 tools/                        code used by two or more tasks
@@ -71,17 +71,18 @@ All three are user-invoked only.
   existing `CLAUDE.md` gets only the template's missing `##` sections, an existing
   `.gitignore` only its missing lines. Safe to re-run.
 - **`/daily-work:brief [area] <describe the task>`** — rewrites the description into a brief,
-  shows it for you to verify, and on approval writes it to `areas/<area>/briefs/<slug>.md`,
-  creating the area (`README.md`, `sources.md`, `reference/`) and its line under `## Areas`
-  if new.
+  shows it for you to verify, and on approval creates `areas/<area>/tasks/<slug>/` with
+  `brief.md`, `inputs/` and `outputs/`, adds `- <date> <slug>: open` under `## Tasks` in the
+  area README, and creates the area (`README.md`, `sources.md`, its line under `## Areas`) if
+  new.
 - **`/daily-work:record [task folder]`** — fills `## Result` and `## Caveats` from `outputs/`
   and the conversation, adds any missing source to the area's `sources.md`, changes the README
   line to `- <date> <slug>: done, <one line>`, commits `daily-work: record <slug>`, and prints
   the Done lines left to check. It refuses to commit if `## Ask` or `## Spec` changed. With no
   argument it lists open tasks.
 
-`inputs/` and `reference/` are gitignored so client files never enter git history; only
-their `.gitkeep` files are tracked. `pyproject.toml` lists pandas, openpyxl, python-pptx,
+`inputs/` is gitignored so client files never enter git history; only its `.gitkeep` is
+tracked. `pyproject.toml` lists pandas, openpyxl, python-pptx,
 python-docx, pypdf and python-dotenv for `uv`; edit it to suit.
 
 ## Using it with grill-with-docs

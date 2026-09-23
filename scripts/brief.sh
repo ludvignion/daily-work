@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # brief.sh <area> <slug>, with stdin: the title on line 1, then the description.
-# Creates the area if new and writes areas/<area>/briefs/<slug>.md.
+# Creates the area if new, then the task folder areas/<area>/tasks/<slug>/ with brief.md,
+# inputs/ and outputs/, and indexes it in the area README.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
@@ -16,19 +17,21 @@ ASK=$(sed 's/[[:space:]]*$//' | sed '/./,$!d')
 DATE=${DAILY_WORK_DATE:-$(date +%F)}
 TITLE=${TITLE:-$SLUG}
 A=areas/$AREA
-F=$A/briefs/$SLUG.md
-[ -e "$F" ] && refuse "$F already exists; nothing created"
-[ -e "$A/tasks/$SLUG" ] && refuse "a task named $SLUG already exists in $A/tasks/; pick another name"
+T=$A/tasks/$SLUG
+F=$T/brief.md
+[ -e "$T" ] && refuse "$T already exists; nothing created"
 export AREA SLUG DATE ASK TITLE
 
 if [ ! -e "$A/README.md" ]; then
   fill "$TEMPLATES/area/README.md" "$A/README.md"
   [ -e "$A/sources.md" ] || fill "$TEMPLATES/area/sources.md" "$A/sources.md"
-  mkdir -p "$A/reference" "$A/tasks"; : > "$A/reference/.gitkeep"
   echo "New area: $A/"
 fi
 grep -qE "^- $AREA(:|\$)" README.md 2>/dev/null || add_under README.md "## Areas" "- $AREA"
 
+mkdir -p "$T/inputs" "$T/outputs"
+: > "$T/inputs/.gitkeep"; : > "$T/outputs/.gitkeep"
 fill "$TEMPLATES/brief/brief.md" "$F"
+add_under "$A/README.md" "## Tasks" "- $DATE $SLUG: open"
 echo "Created $F"
 echo "Next: /grill-with-docs $F"

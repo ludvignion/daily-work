@@ -25,7 +25,7 @@ T=${T%/}; T=${T#"$PWD/"}; T=${T#./}
 [[ $T =~ ^areas/([^/]+)/tasks/([a-z0-9-]+)$ ]] || refuse "'$T' is not areas/<area>/tasks/<slug>"
 AREA=${BASH_REMATCH[1]} SLUG=${BASH_REMATCH[2]}
 A=areas/$AREA
-[ -f "$T/task.md" ] || refuse "$T/task.md not found"
+[ -f "$T/task.md" ] || { [ -f "$T/brief.md" ] && refuse "$T has only brief.md; grill it into task.md first"; refuse "$T/task.md not found"; }
 GIT_DIR=$(git rev-parse --git-dir 2>/dev/null) || refuse "not a git repo"
 SNAP=$GIT_DIR/daily-work/$AREA-$SLUG.spec
 
@@ -59,7 +59,7 @@ else
 fi
 
 paths=("$T" "$A/README.md")
-for p in "$A/sources.md" "$A/reference/.gitkeep" README.md tools; do [ -e "$p" ] && paths+=("$p"); done
+for p in "$A/sources.md" README.md tools; do [ -e "$p" ] && paths+=("$p"); done
 git add -- "${paths[@]}"
 git commit -q -m "daily-work: record $SLUG" -- "${paths[@]}" || refuse "git commit failed; README line updated but nothing committed"
 rm -f "$SNAP"
