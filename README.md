@@ -9,13 +9,13 @@ Local filesystem and git only. No network calls. The plugin never opens `.env`.
 
 ## Install
 
-Load it for one session from a local checkout:
-
 ```
-claude --plugin-dir /path/to/daily-work
+/plugin marketplace add ludvignion/daily-work
+/plugin install daily-work@daily-work
 ```
 
-Or add this repo to a plugin marketplace you use and install it with `/plugin install`.
+To update after a new version is pushed: `/plugin marketplace update daily-work`, then
+restart Claude Code. To try a local checkout instead: `claude --plugin-dir /path/to/daily-work`.
 
 Then, in the repo you keep for daily work:
 
