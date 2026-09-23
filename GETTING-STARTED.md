@@ -89,16 +89,17 @@ All inside Claude Code, in your work repo:
 1. **Describe it.**
    `/daily-work:brief <area> <what you want, in your own words>`
    The area is a client, a system or a responsibility, e.g. `acme`. Claude rewrites your
-   text into a brief and shows it. Answer "yes" or say what to change.
+   text into a brief, picks a short task name for its folder (e.g. `q3-review`), and shows
+   both. Answer "yes" or say what to change.
 2. **Grill it.**
-   `/mattpocock-skills:grill-with-docs areas/<area>/tasks/<slug>/brief.md`
+   `/mattpocock-skills:grill-with-docs areas/<area>/tasks/<task-name>/brief.md`
    Answer the questions. At the end, Claude writes `task.md` in the same folder with what
    was settled.
 3. **Add files.** Put the client's files (decks, spreadsheets, PDFs) in the task's
    `inputs/` folder. Open it from your file manager, or ask Claude where it is.
-4. **Do the work.** "Work on areas/<area>/tasks/<slug>". Results land in `outputs/`.
+4. **Do the work.** "Work on areas/<area>/tasks/<task-name>". Results land in `outputs/`.
 5. **Close it.**
-   `/daily-work:record areas/<area>/tasks/<slug>`
+   `/daily-work:record areas/<area>/tasks/<task-name>`
    Claude writes what was done and what to watch out for, commits, and lists the checks
    left for you.
 

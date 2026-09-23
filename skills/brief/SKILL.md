@@ -3,7 +3,7 @@ name: brief
 description: >-
   /daily-work:brief [area] <describe the task>. Rewrite a person's description of a task into
   a clear brief, show it for the person to verify, then write it to
-  areas/<area>/tasks/<slug>/brief.md, ready for /mattpocock-skills:grill-with-docs, creating the area if new.
+  areas/<area>/tasks/<task-name>/brief.md, ready for /mattpocock-skills:grill-with-docs, creating the area if new.
 disable-model-invocation: true
 argument-hint: "[area] <describe the task>"
 ---
@@ -24,16 +24,16 @@ The user typed: `$ARGUMENTS`
    - fix spelling and grammar, remove repetition, keep the person's terms (e.g. "UNS");
    - add nothing the description does not say, and do not settle anything it leaves open.
      Open points stay open; grilling settles them.
-   Also write a **title** (a short heading, 3 to 8 words, sentence case) and a **slug** (2 to
+   Also write a **title** (a short heading, 3 to 8 words, sentence case) and a **task name** (2 to
    4 lowercase words joined by hyphens, only `a-z`, `0-9`, `-`, e.g. `uns-mockup`).
-3. **Verify.** Show the area, the title, the slug and the rewritten brief, and ask: "Write
+3. **Verify.** Show the area, the title, the task name and the rewritten brief, and ask: "Write
    this brief, or what should change?" Wait for the answer. Revise and show it again until
    the person approves. Write nothing before that.
 4. On approval, run this one Bash command from the repo root. Put the title on the first
    heredoc line and the approved brief, unchanged, on the lines after it:
 
    ```
-   bash "${CLAUDE_PLUGIN_ROOT}/scripts/brief.sh" <area> <slug> <<'DAILY_WORK_ARGS'
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/brief.sh" <area> <task-name> <<'DAILY_WORK_ARGS'
    <title>
    <approved brief>
    DAILY_WORK_ARGS

@@ -97,13 +97,13 @@ All three are user-invoked only.
   existing `CLAUDE.md` gets only the template's missing `##` sections, an existing
   `.gitignore` only its missing lines. Safe to re-run.
 - **`/daily-work:brief [area] <describe the task>`** — rewrites the description into a brief,
-  shows it for you to verify, and on approval creates `areas/<area>/tasks/<slug>/` with
-  `brief.md`, `inputs/` and `outputs/`, adds `- <date> <slug>: open` under `## Tasks` in the
+  shows it for you to verify, and on approval creates `areas/<area>/tasks/<task-name>/` with
+  `brief.md`, `inputs/` and `outputs/`, adds `- <date> <task-name>: open` under `## Tasks` in the
   area README, and creates the area (`README.md`, `sources.md`, its line under `## Areas`) if
   new.
 - **`/daily-work:record [task folder]`** — fills `## Result` and `## Caveats` from `outputs/`
   and the conversation, adds any missing source to the area's `sources.md`, changes the README
-  line to `- <date> <slug>: done, <one line>`, commits `daily-work: record <slug>`, and prints
+  line to `- <date> <task-name>: done, <one line>`, commits `daily-work: record <task-name>`, and prints
   the Done lines left to check. It refuses to commit if `## Ask` or `## Spec` changed. With no
   argument it lists open tasks.
 

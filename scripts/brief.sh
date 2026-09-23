@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# brief.sh <area> <slug>, with stdin: the title on line 1, then the description.
-# Creates the area if new, then the task folder areas/<area>/tasks/<slug>/ with brief.md,
+# brief.sh <area> <task-name>, with stdin: the title on line 1, then the description.
+# Creates the area if new, then the task folder areas/<area>/tasks/<task-name>/ with brief.md,
 # inputs/ and outputs/, and indexes it in the area README.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
@@ -10,7 +10,7 @@ IFS= read -r TITLE || true
 ASK=$(sed 's/[[:space:]]*$//' | sed '/./,$!d')
 
 [[ $AREA =~ $SLUG_RE ]] || refuse "area '$AREA' has characters outside [a-z0-9-]; nothing created"
-[[ $SLUG =~ $SLUG_RE ]] || refuse "slug '$SLUG' has characters outside [a-z0-9-]; nothing created"
+[[ $SLUG =~ $SLUG_RE ]] || refuse "task name '$SLUG' has characters outside [a-z0-9-]; nothing created"
 [ -n "$ASK" ] || refuse "usage: /daily-work:brief <area> <describe the task>"
 [ -d areas ] || refuse "no areas/ here; run /daily-work:init first"
 

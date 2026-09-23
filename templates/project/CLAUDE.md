@@ -10,7 +10,7 @@ README.md, sources.md and glossary if it has one, then the task's task.md.
 
 ## Where things go
 Work belongs to an area: areas/<area>/, a client, a system or a recurring responsibility.
-Each task is a folder areas/<area>/tasks/<slug>/ with inputs/ and outputs/. It starts as
+Each task is a folder areas/<area>/tasks/<task-name>/ with inputs/ and outputs/. It starts as
 brief.md, a person's description of the task; grilling turns it into task.md. Client files
 go in inputs/ and are never committed. What the task produces, code included, goes in
 outputs/ and is committed. A method used twice becomes a skill in .claude/skills/. A script

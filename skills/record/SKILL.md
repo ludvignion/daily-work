@@ -1,12 +1,12 @@
 ---
 name: record
 description: >-
-  /daily-work:record [areas/<area>/tasks/<slug>]. Record a finished task: write
+  /daily-work:record [areas/<area>/tasks/<task-name>]. Record a finished task: write
   ## Result and ## Caveats in its task.md from outputs/ and the conversation, add missing
   sources to the area's sources.md, mark the area README line done, commit, and list the Done
   lines a person still has to check. With no argument, list open tasks and stop.
 disable-model-invocation: true
-argument-hint: "[areas/<area>/tasks/<slug>]"
+argument-hint: "[areas/<area>/tasks/<task-name>]"
 ---
 
 # Record
@@ -43,6 +43,6 @@ Run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/record.sh" list`, print its output, and
    ```
    It refuses if `## Ask` or `## Spec` changed or a placeholder remains; fix your edit and
    rerun finish. Otherwise it marks the README line done, commits "daily-work: record
-   <slug>", and prints the Done lines.
+   <task-name>", and prints the Done lines.
 6. End on the script's output: the Done lines left for a person to check. If they still read
    `<a check a person can confirm in under a minute>`, say the Spec has no Done lines yet.

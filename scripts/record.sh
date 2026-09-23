@@ -22,7 +22,7 @@ fi
 MODE=${1:-}; T=${2:-}
 [[ $MODE == begin || $MODE == finish ]] || refuse "usage: record.sh list | begin <task> | finish <task>"
 T=${T%/}; T=${T#"$PWD/"}; T=${T#./}
-[[ $T =~ ^areas/([^/]+)/tasks/([a-z0-9-]+)$ ]] || refuse "'$T' is not areas/<area>/tasks/<slug>"
+[[ $T =~ ^areas/([^/]+)/tasks/([a-z0-9-]+)$ ]] || refuse "'$T' is not areas/<area>/tasks/<task-name>"
 AREA=${BASH_REMATCH[1]} SLUG=${BASH_REMATCH[2]}
 A=areas/$AREA
 [ -f "$T/task.md" ] || { [ -f "$T/brief.md" ] && refuse "$T has only brief.md; grill it into task.md first"; refuse "$T/task.md not found"; }
