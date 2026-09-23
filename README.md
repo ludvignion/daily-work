@@ -27,8 +27,9 @@ Then, in the repo you keep for daily work:
 
 1. **Brief.** Describe the task in your own words:
    `/daily-work:brief techseed I want to help my colleague visualise different options of a UNS structure …`
-   Claude picks a heading and a file name (and asks for the area if you did not name an
-   existing one), and the plugin writes `areas/techseed/briefs/uns-mockup.md` and shows it.
+   Claude rewrites it into a clear brief (no additions, open points left open), with a
+   heading and a file name, and asks for the area if you did not name an existing one. You
+   approve or correct it; only then is `areas/techseed/briefs/uns-mockup.md` written.
 2. **Grill.** `/grill-with-docs areas/techseed/briefs/uns-mockup.md`. The grilling settles
    what the task is. When it ends, the generated CLAUDE.md has Claude turn the brief into
    `areas/techseed/tasks/uns-mockup/task.md`: your text as the Ask, what was settled as the
@@ -69,9 +70,10 @@ All three are user-invoked only.
   directory is not in a repo. Prints `copied` or `skipped` per file. Never overwrites: an
   existing `CLAUDE.md` gets only the template's missing `##` sections, an existing
   `.gitignore` only its missing lines. Safe to re-run.
-- **`/daily-work:brief [area] <describe the task>`** — writes the description to
-  `areas/<area>/briefs/<slug>.md`, creating the area (`README.md`, `sources.md`,
-  `reference/`) and its line under `## Areas` if new, and prints the brief.
+- **`/daily-work:brief [area] <describe the task>`** — rewrites the description into a brief,
+  shows it for you to verify, and on approval writes it to `areas/<area>/briefs/<slug>.md`,
+  creating the area (`README.md`, `sources.md`, `reference/`) and its line under `## Areas`
+  if new.
 - **`/daily-work:record [task folder]`** — fills `## Result` and `## Caveats` from `outputs/`
   and the conversation, adds any missing source to the area's `sources.md`, changes the README
   line to `- <date> <slug>: done, <one line>`, commits `daily-work: record <slug>`, and prints

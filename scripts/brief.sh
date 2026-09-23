@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # brief.sh <area> <slug>, with stdin: the title on line 1, then the description.
-# Creates the area if new and writes areas/<area>/briefs/<slug>.md, then prints it.
+# Creates the area if new and writes areas/<area>/briefs/<slug>.md.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
@@ -30,8 +30,5 @@ fi
 grep -qE "^- $AREA(:|\$)" README.md 2>/dev/null || add_under README.md "## Areas" "- $AREA"
 
 fill "$TEMPLATES/brief/brief.md" "$F"
-echo "Created $F:"
-echo
-cat "$F"
-echo
+echo "Created $F"
 echo "Next: /grill-with-docs $F"
