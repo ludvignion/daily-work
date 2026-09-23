@@ -52,4 +52,4 @@ done
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { git init -q; echo "git: initialized"; }
 
-echo "Next: /daily-work:brief <area> <describe the task>, or /grill-with-docs aimed at the repo to seed the glossary"
+echo "Next: /daily-work:brief <area> <describe the task>, or /mattpocock-skills:grill-with-docs aimed at the repo to seed the glossary"

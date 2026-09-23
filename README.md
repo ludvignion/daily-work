@@ -3,7 +3,7 @@
 A Claude Code plugin that gives a repo a structure for ad-hoc white-collar work: reading decks,
 evaluating documents, pulling and checking numbers, writing memos. Work is grouped in areas (a
 client, a system, a recurring responsibility). A person describes a task in a brief; Matt Pocock's
-`/grill-with-docs` skill grills the brief into a task Claude can work on; the plugin records
+`grill-with-docs` skill grills the brief into a task Claude can work on; the plugin records
 what was done. Nothing here builds software.
 
 Local filesystem and git only. No network calls. The plugin never opens `.env`.
@@ -13,15 +13,26 @@ Local filesystem and git only. No network calls. The plugin never opens `.env`.
 Everything below happens in your **work repo**, the repo where you do daily work, not in this
 plugin's repo.
 
-**1. Install the daily-work plugin** (once per machine; from a terminal):
+**1. Install the plugins** (once per machine, inside Claude Code):
 
 ```
-claude plugin marketplace add ludvignion/daily-work
-claude plugin install daily-work@daily-work
+/plugin marketplace add ludvignion/daily-work
+/plugin install daily-work@daily-work
+/plugin install mattpocock-skills
 ```
 
-To update later: `claude plugin marketplace update daily-work`, then
-`claude plugin update daily-work@daily-work`, then restart Claude Code.
+`mattpocock-skills` is Matt Pocock's skill set from
+[mattpocock/skills](https://github.com/mattpocock/skills), in Claude Code's official
+marketplace. daily-work uses its `grill-with-docs` skill (which calls his `grilling` and
+`domain-modeling`) for the grilling step, as `/mattpocock-skills:grill-with-docs`. daily-work
+does not ship or call it.
+
+Both plugins update automatically. A planned change in Matt Pocock's skills renames
+`CONTEXT.md` to `GLOSSARY.md`; it will arrive without warning, so the generated `CLAUDE.md`
+reads whichever of the two exists.
+
+To update daily-work by hand: `/plugin marketplace update daily-work`, then restart Claude
+Code. From a terminal, the same commands start with `claude plugin` instead of `/plugin`.
 
 **2. Create the work repo and set it up** (once per work repo):
 
@@ -31,28 +42,8 @@ claude
 /daily-work:init
 ```
 
-**3. Add Matt Pocock's grill-with-docs to the work repo** (once per work repo):
-
-The grilling step uses Matt Pocock's `grill-with-docs` skill from
-[mattpocock/skills](https://github.com/mattpocock/skills), which calls his `grilling` and
-`domain-modeling` skills. daily-work does not ship or call them. In the work repo:
-
-```
-npx skills@latest add mattpocock/skills
-git add -A && git commit -m "Add Matt Pocock's grill skills"
-```
-
-In the installer, pick `grill-with-docs`, `grilling`, `domain-modeling` and
-`setup-matt-pocock-skills`, for Claude Code, in the project. Committing the copied files pins
-them: an open change in his repo renames `CONTEXT.md` to `GLOSSARY.md`, and the `CLAUDE.md`
-this plugin generates reads `CONTEXT.md`.
-
-His Claude Code plugin (`claude plugin install mattpocock-skills`) also works, but it updates
-itself, so it cannot be pinned, and its command is `/mattpocock-skills:grill-with-docs`
-instead of `/grill-with-docs`.
-
-To try a local checkout of daily-work instead of step 1: `claude --plugin-dir
-/path/to/daily-work`.
+To try a local checkout of daily-work instead of installing it:
+`claude --plugin-dir /path/to/daily-work`.
 
 ## The per-task loop
 
@@ -62,7 +53,7 @@ To try a local checkout of daily-work instead of step 1: `claude --plugin-dir
    heading and a file name, and asks for the area if you did not name an existing one. You
    approve or correct it; only then is the task folder `areas/techseed/tasks/uns-mockup/`
    created, holding `brief.md`, `inputs/` and `outputs/`.
-2. **Grill.** `/grill-with-docs areas/techseed/tasks/uns-mockup/brief.md` (Matt Pocock's
+2. **Grill.** `/mattpocock-skills:grill-with-docs areas/techseed/tasks/uns-mockup/brief.md` (Matt Pocock's
    skill). It interviews you until the task is clear, and records terms in `CONTEXT.md` and
    decisions in `docs/adr/`. When it ends, the generated CLAUDE.md has Claude replace
    `brief.md` with `task.md` in the same folder: the brief as the Ask, what was settled as
@@ -122,5 +113,5 @@ python-docx, pypdf and python-dotenv for `uv`; edit it to suit.
 - It never calls, wraps or edits Matt Pocock's skills, and its own skills work without them.
 - The generated `CLAUDE.md` is what makes a grilling session end by turning `brief.md` into
   `task.md`.
-- It never creates or edits `CONTEXT.md`, `CONTEXT-MAP.md` or `docs/adr/`; those belong to
-  `grill-with-docs`.
+- It never creates or edits `CONTEXT.md`, `GLOSSARY.md`, `CONTEXT-MAP.md` or `docs/adr/`;
+  those belong to `grill-with-docs`.

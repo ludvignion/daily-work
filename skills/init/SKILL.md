@@ -18,4 +18,4 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/init.sh" $ARGUMENTS
 ```
 
 Print its output exactly as printed, one line per file, and end the turn on its last line.
-Edit nothing yourself. Do not create CONTEXT.md. Never open or print .env.
+Edit nothing yourself. Do not create CONTEXT.md or GLOSSARY.md. Never open or print .env.

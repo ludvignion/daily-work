@@ -3,7 +3,7 @@ name: brief
 description: >-
   /daily-work:brief [area] <describe the task>. Rewrite a person's description of a task into
   a clear brief, show it for the person to verify, then write it to
-  areas/<area>/tasks/<slug>/brief.md, ready for /grill-with-docs, creating the area if new.
+  areas/<area>/tasks/<slug>/brief.md, ready for /mattpocock-skills:grill-with-docs, creating the area if new.
 disable-model-invocation: true
 argument-hint: "[area] <describe the task>"
 ---
@@ -41,5 +41,5 @@ The user typed: `$ARGUMENTS`
 5. Print its output exactly as printed and end the turn on its last line. A refusal is one
    line starting "refused:"; print it and stop.
 
-Edit nothing yourself and do not start the task. Do not create CONTEXT.md. Never open or
+Edit nothing yourself and do not start the task. Do not create CONTEXT.md or GLOSSARY.md. Never open or
 print .env.

@@ -5,8 +5,8 @@
 tasks land here.>
 
 ## Reading order
-Before any task: CONTEXT.md if it exists, then the area's README.md, sources.md and CONTEXT.md
-if it has one, then the task's task.md.
+Before any task: the glossary if it exists (CONTEXT.md, or GLOSSARY.md), then the area's
+README.md, sources.md and glossary if it has one, then the task's task.md.
 
 ## Where things go
 Work belongs to an area: areas/<area>/, a client, a system or a recurring responsibility.
@@ -17,12 +17,12 @@ outputs/ and is committed. A method used twice becomes a skill in .claude/skills
 used once stays in the task's outputs/; used twice, it moves to tools/.
 
 ## Before answering
-State in one line: which sources you will use, what each term in the ask means (CONTEXT.md or
-"undefined"), the scope, and the form of the output. An undefined term or a missing source is
+State in one line: which sources you will use, what each term in the ask means (the glossary
+or "undefined"), the scope, and the form of the output. An undefined term or a missing source is
 the question to ask; nothing else is.
 
 ## When to grill
-Run /grill-with-docs when the clarify line shows an undefined term or a missing source, or
+Run /mattpocock-skills:grill-with-docs when the clarify line shows an undefined term or a missing source, or
 when the ask is larger than one sitting. Otherwise the clarify line is enough.
 
 ## After a grilling session on a brief

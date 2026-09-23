@@ -13,7 +13,7 @@ argument-hint: "[areas/<area>/tasks/<slug>]"
 
 Arguments: `$ARGUMENTS`
 
-Never open or print .env. Never create CONTEXT.md. Never edit `## Ask` or `## Spec`.
+Never open or print .env. Never create CONTEXT.md or GLOSSARY.md. Never edit `## Ask` or `## Spec`.
 
 ## No argument
 
