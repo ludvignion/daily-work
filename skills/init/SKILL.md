@@ -2,7 +2,7 @@
 name: init
 description: >-
   /daily-work:init [dir]. Set up a daily-work repo: CLAUDE.md, README.md, .gitignore,
-  .env.example, pyproject.toml, areas/_inbox/, and git init if needed. Never overwrites; an
+  .env.example, pyproject.toml, areas/, tools/, and git init if needed. Never overwrites; an
   existing CLAUDE.md gets only missing ## sections, an existing .gitignore only missing lines.
   The session runs one script and edits nothing.
 disable-model-invocation: true

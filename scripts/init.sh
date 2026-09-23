@@ -46,12 +46,10 @@ for f in CLAUDE.md README.md .gitignore .env.example pyproject.toml; do
   fi
 done
 
-if [ -e areas/_inbox/.gitkeep ]; then
-  echo "areas/_inbox/.gitkeep: skipped"
-else
-  mkdir -p areas/_inbox && : > areas/_inbox/.gitkeep && echo "areas/_inbox/.gitkeep: copied"
-fi
+for f in areas/.gitkeep tools/.gitkeep; do
+  if [ -e "$f" ]; then echo "$f: skipped"; else mkdir -p "$(dirname "$f")" && : > "$f" && echo "$f: copied"; fi
+done
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { git init -q; echo "git: initialized"; }
 
-echo "Next: /daily-work:task <area> <slug>, or /grill-with-docs aimed at the repo to seed the glossary"
+echo "Next: /daily-work:brief <area> <describe the task>, or /grill-with-docs aimed at the repo to seed the glossary"

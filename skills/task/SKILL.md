@@ -1,35 +1,30 @@
 ---
 name: task
 description: >-
-  /daily-work:task <what the task is> [--area <name>]. Create a task folder with task.md (a
-  heading, the Ask in the user's words, an empty Spec), inputs/ and outputs/. Without --area
-  it goes to areas/_inbox/. The session picks a heading and a folder name, runs one script,
-  and edits nothing.
+  /daily-work:task <areas/<area>/briefs/<slug>.md>. Turn a brief into a task folder
+  areas/<area>/tasks/<date>-<slug>/ with task.md, inputs/ and outputs/, and write anything
+  settled in this conversation into its Spec. Normally a grilling session does this itself
+  (see CLAUDE.md); this is the fallback.
 disable-model-invocation: true
-argument-hint: "<what the task is> [--area <name>]"
+argument-hint: "<areas/<area>/briefs/<slug>.md>"
 ---
 
 # Task
 
 The user typed: `$ARGUMENTS`
 
-1. From that text, write:
-   - a **title**: a short heading for the task, 3 to 8 words, sentence case, one line.
-   - a **slug**: 2 to 4 lowercase words joined by hyphens, only `a-z`, `0-9`, `-`
-     (e.g. `uns-mockup`, `q3-revenue-check`).
-   If the text is empty, print `usage: /daily-work:task <what the task is> [--area <name>]`
-   and stop.
-2. Run this one Bash command from the repo root. Put the title on the first heredoc line and
-   the user's text, exactly as typed and unchanged, on the lines after it:
+1. If that is empty, list the files in `areas/*/briefs/`, print them, and stop.
+2. Run this one Bash command from the repo root:
 
    ```
-   bash "${CLAUDE_PLUGIN_ROOT}/scripts/task.sh" <slug> <<'DAILY_WORK_ARGS'
-   <title>
-   $ARGUMENTS
-   DAILY_WORK_ARGS
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/task.sh" <brief path>
    ```
-3. Print its output exactly as printed and end the turn on its last line. A refusal is one
-   line starting "refused:"; print it and stop.
+   A refusal is one line starting "refused:"; print it and stop.
+3. If this conversation settled anything about the task (a grilling session, answers to
+   questions), write it into the new task.md under `## Spec`: Purpose, Done lines, Decided as
+   stated or assumed, Out of scope. Change nothing else in task.md. If nothing was settled,
+   leave the Spec as it is.
+4. Print the script's output, then the Spec if you wrote one, and end with:
+   `Next: tell Claude to work on <task folder>, then /daily-work:record <task folder>`
 
-Edit nothing yourself and do not start the task. Do not create CONTEXT.md. Never open or
-print .env.
+Do not start the task. Do not create CONTEXT.md. Never open or print .env.

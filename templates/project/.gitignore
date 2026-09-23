@@ -2,6 +2,5 @@
 .venv/
 __pycache__/
 areas/*/tasks/*/inputs/*
-areas/*/tasks/*/outputs/*
 areas/*/reference/*
 !**/.gitkeep

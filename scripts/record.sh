@@ -56,7 +56,7 @@ else
 fi
 
 paths=("$T" "$A/README.md")
-for p in "$A/sources.md" "$A/reference/.gitkeep" README.md; do [ -e "$p" ] && paths+=("$p"); done
+for p in "$A/sources.md" "$A/reference/.gitkeep" README.md tools; do [ -e "$p" ] && paths+=("$p"); done
 git add -- "${paths[@]}"
 git commit -q -m "daily-work: record $SLUG" -- "${paths[@]}" || refuse "git commit failed; README line updated but nothing committed"
 rm -f "$SNAP"
