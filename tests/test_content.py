@@ -97,7 +97,7 @@ class OptIn(ContentCase):
     def test_the_shell_and_the_hooks_use_the_same_switch(self):
         self.assertIn('[ "${DAILY_WORK_CONTENT:-}" = 0 ] && return 0', (REPO / "scripts" / "lib.sh").read_text())
         hooks = (REPO / "claude-code" / "hooks.json").read_text()
-        self.assertEqual(hooks.count('[ \\"${DAILY_WORK_CONTENT:-}\\" = 0 ] || python3'), 3)
+        self.assertEqual(hooks.count('[ \\"${DAILY_WORK_CONTENT:-}\\" = 0 ] || bash \\"${CLAUDE_PLUGIN_ROOT}/scripts/run-py.sh\\" content.py'), 3)
         self.assertNotIn("= 1 ]", hooks)
 
     def test_empty_telemetry_json_sends_nothing(self):

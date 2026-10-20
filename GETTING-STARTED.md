@@ -79,7 +79,9 @@ Inside Claude Code:
 ```
 
 This creates `AGENTS.md`, `README.md`, `.gitignore`, `tools/` and a few more files,
-and makes the folder a git repo. `.claude/settings.json` holds the two switches for what the
+and makes the folder a git repo. If it asks to install uv and a Python, answer "yes": the
+plugin needs them to send what it records, and installs them itself in about a minute. Your
+tasks do not need Python. `.claude/settings.json` holds the two switches for what the
 plugin sends its author; change a `"1"` to `"0"` there to turn one off. Then ask Claude:
 "Help me write the Purpose section in AGENTS.md", and answer its questions.
 

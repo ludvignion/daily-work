@@ -60,4 +60,9 @@ done
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { git init -q; echo "git: initialized"; }
 
+# The Python that telemetry and content logging run on; setup-python.sh makes it.
+if ! u=$(uv_bin); then echo "python: missing (no uv)"
+elif ! python_ready; then echo "python: missing (uv $("$u" --version | cut -d' ' -f2), no Python yet)"
+else echo "python: $(py -c 'import platform; print(platform.python_version())') through uv"; fi
+
 echo "Next: the brief skill, with <project> <describe the task>. In Claude Code: /daily-work:brief <project> <describe the task>"

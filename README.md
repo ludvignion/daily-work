@@ -78,6 +78,17 @@ claude
 /daily-work:init
 ```
 
+### Requirements
+
+- **git**, and on Windows **Git for Windows**: the skills are bash scripts, and Claude Code runs
+  them in Git Bash.
+- **uv and a Python for it**, for telemetry, content logging and feedback only; the tasks
+  themselves need no Python. `/daily-work:init` checks and, if either is missing, asks once
+  whether to install them (uv's official installer, then `uv python install`). The plugin
+  never uses the system `python3`: on Windows that can be the Microsoft Store placeholder, on
+  macOS a shim that opens an install dialog. Without uv the skills still work, and brief and
+  record print one line saying nothing was sent.
+
 To try a local checkout of daily-work instead of installing it:
 `claude --plugin-dir /path/to/daily-work` or `copilot --plugin-dir /path/to/daily-work`.
 

@@ -1,6 +1,7 @@
 """The shell scripts the skills run: init.sh, brief.sh and record.sh, each in a throwaway repo.
 Telemetry and content logging are switched off, and HOME points into the temporary folder."""
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -109,6 +110,46 @@ class Init(ScriptCase):
         lines = self.read(".gitignore").splitlines()
         self.assertEqual(lines[0], "node_modules")
         self.assertEqual(len(lines), len(set(lines)))
+
+
+class Python(ScriptCase):
+    """The plugin's Python runs through uv only; without it the skills still work and say so."""
+    def no_uv(self):
+        self.env["PATH"] = "/usr/bin:/bin"
+
+    def test_init_says_when_there_is_no_uv(self):
+        self.no_uv()
+        code, out = self.run_script("init.sh")
+        self.assertEqual(code, 0)
+        self.assertIn("python: missing (no uv)", out)
+
+    def test_init_says_when_uv_has_no_python_yet(self):
+        code, out = self.run_script("init.sh")
+        self.assertRegex(out, r"python: missing \(uv [0-9.]+, no Python yet\)")
+
+    def test_brief_without_python_writes_an_id_and_says_so(self):
+        self.no_uv()
+        self.run_script("init.sh")
+        code, out = self.run_script("brief.sh", "acme", "q3-numbers", stdin="Q3 numbers\nSum up Q3.")
+        self.assertEqual(code, 0, out)
+        self.assertRegex(self.read("acme/briefs/q3-numbers.md"),
+                         r"\nId: [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\n")
+        self.assertIn("daily-work: no Python set up", out)
+
+    def test_ids_differ(self):
+        self.run_script("init.sh")
+        ids = set()
+        for task in ["a", "b", "c"]:
+            self.run_script("brief.sh", "acme", task, stdin=f"{task}\nx")
+            ids.add(re.search(r"\nId: (\S+)\n", self.read(f"acme/briefs/{task}.md")).group(1))
+        self.assertEqual(len(ids), 3)
+
+    def test_nothing_calls_the_system_python(self):
+        for f in [*SCRIPTS.glob("*.sh"), REPO / "claude-code" / "hooks.json",
+                  REPO / "com.github.copilot" / "hooks" / "hooks.json", *(REPO / "skills").glob("*/SKILL.md")]:
+            code = [l for l in f.read_text().splitlines() if not l.lstrip().startswith("#")]
+            # A python on its own is the system one; every python here is uv's ("$u" ...).
+            self.assertFalse([l for l in code if re.search(r"(^|[\s;|&(])python3?\s", l) and '"$u" ' not in l], f)
 
 
 class Brief(ScriptCase):

@@ -24,7 +24,8 @@ T=$P/tasks/$SLUG.md
 [ -e "$F" ] && refuse "$F already exists; nothing created"
 [ -e "$T" ] && refuse "$T already exists; nothing created"
 # A random id for usage telemetry (README "Telemetry"); says nothing about the task.
-ID=$(python3 -c 'import uuid; print(uuid.uuid4())' 2>/dev/null || true)
+ID=$(new_uuid)
+[[ $ID =~ ^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || refuse "could not make a task id from /dev/urandom; nothing created"
 export PROJECT SLUG DATE ASK TITLE ID
 
 if [ ! -d "$P/tasks" ]; then
@@ -40,6 +41,7 @@ add_under "$P/README.md" "## Tasks" "- $DATE $SLUG: open"
 telemetry event brief "$PWD/$T"
 content created "$PWD/$T"
 echo "Created $F"
+python_note
 # Claude Code names the skill by its plugin; other agents run it by its own name.
 if [ -n "${CLAUDECODE:-}" ]; then echo "Next: /mattpocock-skills:grill-with-docs $F"
 else echo "Next: run the grill-with-docs skill on $F"; fi

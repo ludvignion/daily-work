@@ -91,6 +91,7 @@ git commit -q -m "daily-work: record $SLUG" -- "${paths[@]}" || refuse "git comm
 rm -f "$SNAP"
 telemetry event record "$PWD/$T"
 content outcome "$PWD/$T"
+python_note
 
 echo "committed: $(git rev-parse --short HEAD) daily-work: record $SLUG"
 echo "$P/README.md: $LINE"

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/telemetry.py\" hook",
+            "command": "[ \"${DAILY_WORK_TELEMETRY:-}\" = 0 ] || bash \"${CLAUDE_PLUGIN_ROOT}/scripts/run-py.sh\" telemetry.py hook; true",
             "timeout": 5
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/content.py\" hook; true",
+            "command": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || bash \"${CLAUDE_PLUGIN_ROOT}/scripts/run-py.sh\" content.py hook; true",
             "timeout": 5
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/content.py\" hook; true",
+            "command": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || bash \"${CLAUDE_PLUGIN_ROOT}/scripts/run-py.sh\" content.py hook; true",
             "timeout": 5
           }
         ]
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/content.py\" hook; true",
+            "command": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || bash \"${CLAUDE_PLUGIN_ROOT}/scripts/run-py.sh\" content.py hook; true",
             "timeout": 5
           }
         ]

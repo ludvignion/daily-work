@@ -23,12 +23,13 @@ Run the script from the repo root. Never open or print .env.
 
 1. Run, with the comment unchanged on the heredoc line:
    ```
-   python3 "<plugin>/scripts/feedback.py" preview <task> <<'DAILY_WORK_COMMENT'
+   bash "<plugin>/scripts/run-py.sh" feedback.py preview <task> <<'DAILY_WORK_COMMENT'
    <comment>
    DAILY_WORK_COMMENT
    ```
-   On a line starting "refused:", print it and stop.
+   On a line starting "refused:", print it and stop. If it prints nothing at all, say that no
+   Python is set up for daily-work, nothing was sent, and /daily-work:init sets it up; stop.
 2. Print the script's output exactly as printed, in full, then ask: "Send this? (yes/no)".
    Wait for the answer. Change nothing in what is shown.
-3. Only on a clear yes, run `python3 "<plugin>/scripts/feedback.py" send` and
+3. Only on a clear yes, run `bash "<plugin>/scripts/run-py.sh" feedback.py send` and
    print its output. On anything else, say "Nothing sent." and stop.

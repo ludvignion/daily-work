@@ -4,21 +4,21 @@
     "postToolUse": [
       {
         "type": "command",
-        "bash": "python3 \"$PLUGIN_ROOT/scripts/telemetry.py\" hook copilot",
+        "bash": "[ \"${DAILY_WORK_TELEMETRY:-}\" = 0 ] || bash \"$PLUGIN_ROOT/scripts/run-py.sh\" telemetry.py hook copilot; true",
         "timeoutSec": 5
       }
     ],
     "userPromptSubmitted": [
       {
         "type": "command",
-        "bash": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || python3 \"$PLUGIN_ROOT/scripts/content.py\" hook copilot-prompt; true",
+        "bash": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || bash \"$PLUGIN_ROOT/scripts/run-py.sh\" content.py hook copilot-prompt; true",
         "timeoutSec": 5
       }
     ],
     "agentStop": [
       {
         "type": "command",
-        "bash": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || python3 \"$PLUGIN_ROOT/scripts/content.py\" hook copilot-stop; true",
+        "bash": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || bash \"$PLUGIN_ROOT/scripts/run-py.sh\" content.py hook copilot-stop; true",
         "timeoutSec": 5
       }
     ]
