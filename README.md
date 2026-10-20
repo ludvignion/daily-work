@@ -132,23 +132,31 @@ accepted everywhere a name is.
 `hackathon/outputs/pitch-deck.pptx` in place; its brief names the file, and nothing is copied
 or created beside it.
 
-A repo set up by this plugin (the repo here is called `techseed`):
+A repo set up by this plugin (the repo here is called `techseed`), with what makes each part:
 
 ```
 techseed/
-  AGENTS.md                   how a coding agent works here
-  README.md                   ## Projects: one line per project
-  tools/                      code used by two or more tasks
-  hackathon/                  a project
-    README.md                 ## Tasks: one line per task, open or done
-    sources.md                where facts come from, and which source wins
+  AGENTS.md                     init: how a coding agent works here
+  README.md                     init; brief adds a line per project under ## Projects
+  .gitignore                    init: .env, .venv/, __pycache__/, every project's inputs/
+  .env.example                  init: keys a task may need; copy to .env (never committed)
+  pyproject.toml                init: pandas, openpyxl, python-pptx, python-docx, pypdf, python-dotenv
+  .claude/settings.json         init: the two switches, for Claude Code
+  CLAUDE.md                     only if the repo had one: init adds @AGENTS.md
+  tools/                        init: code used by two or more tasks
+  CONTEXT.md                    grill-with-docs: the glossary (GLOSSARY.md after his rename)
+  docs/adr/                     grill-with-docs: decisions
+  hackathon/                    brief, for a new project
+    README.md                   brief; ## Tasks: one line per task, open or done
+    sources.md                  brief; record adds a line per source used
     briefs/
-      uns-mockup.md           not grilled yet: the verified description
+      uns-mockup.md             brief: not grilled yet; the grilling deletes it
     tasks/
-      pitch-deck.md           grilled: heading, Ask, Spec, Result, Caveats
-      pitch-deck-prices.md    a later task that changes the same deck
-    inputs/                   client files, shared by the project's tasks (not committed)
-    outputs/                  what the tasks produced, code included (committed)
+      pitch-deck.md             the grilling (Ask, Spec); record (Result, Caveats)
+      pitch-deck-prices.md      a later task that changes the same deck
+      .pitch-deck.content-id    content logging: the task's random content id
+    inputs/                     client files, shared by the project's tasks (not committed)
+    outputs/                    the work: what the tasks produced, code included (committed)
       pitch-deck.pptx
 ```
 
