@@ -149,6 +149,37 @@ def drop(session):
     run_file(session).unlink(missing_ok=True)
 
 
+def inside(task, cwd):
+    """Whether the task file is under the repo a run started in; any path style, so a Windows
+    C:\\ path from a hook and a C:/ path from Git Bash compare equal."""
+    task, cwd = (os.path.normcase(os.path.abspath(p)) for p in (task, cwd))
+    return os.path.commonpath([task, cwd]) == cwd
+
+
+class locked:
+    """One hook at a time on the open runs. A Stop hook and the next prompt's hook can run at
+    once; each loads the run, adds a turn and saves it, and without this one turn is lost."""
+    def __enter__(self):
+        telemetry.HOME.mkdir(parents=True, exist_ok=True)
+        self.path = telemetry.HOME / "content-runs.lock"
+        for _ in range(100):
+            try:
+                os.close(os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+                return self
+            except FileExistsError:
+                try:
+                    if time.time() - self.path.stat().st_mtime > 10:
+                        self.path.unlink()  # left by a hook that was killed
+                        continue
+                except FileNotFoundError:
+                    continue
+                time.sleep(0.05)
+        raise TimeoutError("content-runs lock")
+
+    def __exit__(self, *exc):
+        self.path.unlink(missing_ok=True)
+
+
 def open_runs(skill):
     folder = telemetry.HOME / "content-runs"
     for f in sorted(folder.glob("*.json")) if folder.is_dir() else []:
@@ -237,19 +268,21 @@ def created(task):
     if not enabled() or notice_due():
         return
     content_id(task)
-    mine = [(s, r) for s, r in open_runs("brief") if task.startswith(r["cwd"].rstrip("/") + "/")]
-    if mine:
-        session, run = max(mine, key=lambda sr: sr[1]["started"])
-        save(session, {**run, "task": task, "ended": True})
+    with locked():
+        mine = [(s, r) for s, r in open_runs("brief") if inside(task, r["cwd"])]
+        if mine:
+            session, run = max(mine, key=lambda sr: sr[1]["started"])
+            save(session, {**run, "task": task, "ended": True})
 
 
 def outcome(task):
     if not enabled() or notice_due():
         return
-    mine = [(s, r) for s, r in open_runs("record") if task.startswith(r["cwd"].rstrip("/") + "/")]
-    if mine:
-        session, run = max(mine, key=lambda sr: sr[1]["started"])
-        save(session, {**run, "task": task, "ended": True})
+    with locked():
+        mine = [(s, r) for s, r in open_runs("record") if inside(task, r["cwd"])]
+        if mine:
+            session, run = max(mine, key=lambda sr: sr[1]["started"])
+            save(session, {**run, "task": task, "ended": True})
     telemetry.send("content", {
         "kind": "outcome", "ts": hour(), "plugin_version": telemetry.version(),
         "content_id": content_id(task), "outcome": "completed",
@@ -262,14 +295,16 @@ def main(argv):
     task = os.path.abspath(argv[2]) if len(argv) > 2 and cmd != "hook" else ""
     if cmd == "hook":
         if ready():
-            hook = json.load(sys.stdin)
-            if len(argv) > 2:
-                # Copilot CLI: camelCase fields, the event in the command line, no prompt ids.
-                hook = {"session_id": hook["sessionId"], "cwd": hook["cwd"], "prompt": hook.get("prompt", "")}
-                {"copilot-prompt": on_prompt, "copilot-stop": on_stop}[argv[2]](hook)
-                return
-            handler = {"UserPromptExpansion": on_command, "UserPromptSubmit": on_prompt, "Stop": on_stop}
-            handler[hook["hook_event_name"]](hook)
+            # UTF-8 whatever the system's code page: on Windows the default would garble å, ä, ö.
+            hook = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+            with locked():
+                if len(argv) > 2:
+                    # Copilot CLI: camelCase fields, the event in the command line, no prompt ids.
+                    hook = {"session_id": hook["sessionId"], "cwd": hook["cwd"], "prompt": hook.get("prompt", "")}
+                    {"copilot-prompt": on_prompt, "copilot-stop": on_stop}[argv[2]](hook)
+                    return
+                handler = {"UserPromptExpansion": on_command, "UserPromptSubmit": on_prompt, "Stop": on_stop}
+                handler[hook["hook_event_name"]](hook)
     elif cmd == "created":
         created(task)
     elif cmd == "id":

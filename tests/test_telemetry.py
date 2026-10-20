@@ -104,7 +104,7 @@ class SupabasePayloads(TelemetryCase):
         with redirect_stdout(io.StringIO()):
             hook = {"cwd": "/", "tool_input": {"file_path": str(self.task)}}
             self.brief.write_text("x")
-            with mock.patch.object(sys, "stdin", io.StringIO(json.dumps(hook))):
+            with mock.patch.object(sys, "stdin", io.TextIOWrapper(io.BytesIO(json.dumps(hook).encode()))):
                 telemetry.main(["telemetry.py", "hook"])
         return self.sent
 
@@ -258,6 +258,11 @@ class GrillHook(TelemetryCase):
     def test_a_relative_path_is_read_from_the_cwd(self):
         self.brief.write_text("x")
         hook = {"cwd": str(self.project.parent), "tool_input": {"file_path": "acme/tasks/q3-numbers.md"}}
+        self.assertEqual(telemetry.grilled_task(hook), str(self.task))
+
+    def test_a_windows_path_is_read_too(self):
+        self.brief.write_text("x")
+        hook = {"cwd": str(self.project.parent), "tool_input": {"file_path": "acme\\tasks\\q3-numbers.md"}}
         self.assertEqual(telemetry.grilled_task(hook), str(self.task))
 
     def test_a_task_file_without_a_brief_is_not(self):

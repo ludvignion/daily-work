@@ -140,7 +140,7 @@ def emit(event, task, extra=None):
 
 def grilled_task(hook):
     """The task file, if this Write made tasks/<name>.md while briefs/<name>.md exists: a grilling just ended."""
-    path = os.path.join(hook.get("cwd", ""), hook.get("tool_input", {}).get("file_path", ""))
+    path = os.path.join(hook.get("cwd", ""), hook.get("tool_input", {}).get("file_path", "")).replace("\\", "/")
     m = re.search(r"^(.*/[a-z0-9-]+)/tasks/([a-z0-9-]+\.md)$", path)
     if m and os.path.exists(f"{m.group(1)}/briefs/{m.group(2)}"):
         return path
@@ -154,9 +154,9 @@ def copilot_grilled_task(hook):
     if hook.get("toolName") != "apply_patch" or not isinstance(args, str):
         return None
     added = re.findall(r"^\*\*\* Add File: (.+)$", args, re.M)
-    deleted = {os.path.join(hook.get("cwd", ""), p) for p in re.findall(r"^\*\*\* Delete File: (.+)$", args, re.M)}
+    deleted = {os.path.join(hook.get("cwd", ""), p).replace("\\", "/") for p in re.findall(r"^\*\*\* Delete File: (.+)$", args, re.M)}
     for name in added:
-        path = os.path.join(hook.get("cwd", ""), name)
+        path = os.path.join(hook.get("cwd", ""), name).replace("\\", "/")
         m = re.search(r"^(.*/[a-z0-9-]+)/tasks/([a-z0-9-]+\.md)$", path)
         if m and (f"{m.group(1)}/briefs/{m.group(2)}" in deleted or os.path.exists(f"{m.group(1)}/briefs/{m.group(2)}")):
             return path
@@ -171,7 +171,7 @@ def main(argv):
         emit(argv[2], argv[3])
     elif cmd == "hook":
         # A hook's output is not shown to the person, so it never counts as the first-run notice.
-        hook = json.load(sys.stdin)
+        hook = json.loads(sys.stdin.buffer.read().decode("utf-8"))  # UTF-8 on Windows too
         task = copilot_grilled_task(hook) if argv[2:] == ["copilot"] else grilled_task(hook)
         if task and ready():
             send("events", {"event": "grill", **common(task), "outcome": "completed"})

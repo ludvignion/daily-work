@@ -43,7 +43,7 @@ class ContentCase(unittest.TestCase):
 
     def run_main(self, *argv, hook=None):
         out = io.StringIO()
-        with redirect_stdout(out), mock.patch.object(sys, "stdin", io.StringIO(json.dumps(hook or {}))):
+        with redirect_stdout(out), mock.patch.object(sys, "stdin", io.TextIOWrapper(io.BytesIO(json.dumps(hook or {}, ensure_ascii=False).encode()), encoding="cp1252")):
             content.main(["content.py", *argv])
         return out.getvalue()
 
@@ -302,6 +302,38 @@ class Runs(ContentCase):
         self.run_main("outcome", str(self.task))
         for _, p in self.sent:
             self.assertRegex(p["ts"], r"^\d{4}-\d\d-\d\dT\d\d:00:00Z$")
+
+
+class Windows(ContentCase):
+    """What broke in Claude desktop on Windows: the code page, path styles, hooks running at once."""
+    def setUp(self):
+        super().setUp()
+        self.accept_notice()
+
+    def test_hook_input_is_read_as_utf8_whatever_the_code_page(self):
+        # run_main hands the hook its input through a cp1252 text layer, as Windows does.
+        self.brief.write_text("# Q3\n")
+        self.command("mattpocock-skills:grill-with-docs", "acme/briefs/q3-numbers.md")
+        self.say("Göteborg — så klart")
+        self.task.write_text("# Q3\n")
+        self.reply("Klart — tack")
+        (_, p), = self.sent
+        self.assertEqual([t["text"] for t in p["turns"]][1:], ["Göteborg — så klart", "Klart — tack"])
+
+    def test_a_task_path_in_another_style_is_inside_the_run_repo(self):
+        import ntpath
+        with mock.patch.object(content.os, "path", ntpath):
+            self.assertTrue(content.inside("C:/Users/a/work/acme/tasks/q3.md", "C:\\Users\\a\\work"))
+            self.assertTrue(content.inside("c:\\users\\a\\work\\acme\\tasks\\q3.md", "C:\\Users\\a\\work\\"))
+            self.assertFalse(content.inside("C:/Users/a/work2/acme/tasks/q3.md", "C:\\Users\\a\\work"))
+
+    def test_a_lock_left_by_a_killed_hook_does_not_block(self):
+        lock = self.home / "content-runs.lock"
+        lock.write_text("")
+        os.utime(lock, (1, 1))
+        self.command("daily-work:brief", "acme pull the Q3 numbers")
+        self.assertTrue(list((self.home / "content-runs").glob("*.json")))
+        self.assertFalse(lock.exists())
 
 
 class Copilot(ContentCase):
