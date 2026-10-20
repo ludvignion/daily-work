@@ -1,0 +1,3 @@
+-- eval_steps: Eval step inputs and outputs, latest run
+-- Every step of every run in the latest complete eval run: whether it completed, its scores, the judge's reasons, and the start of what went in and what came out. Reads public.eval_steps (simulated data only).
+with latest as (select run_id from public.eval_steps order by run_id desc limit 1) select run_id, scenario, run, step, completed, metrics, reasons, left(input, 3000) as input, left(output, 3000) as output, jsonb_array_length(transcript) as messages from public.eval_steps where run_id = (select run_id from latest) order by scenario, run, array_position(array['brief', 'grill', 'work', 'record', 'end_to_end'], step);

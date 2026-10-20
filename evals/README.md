@@ -5,9 +5,11 @@ user, scores every step and the flow end to end, and compares the result with a 
 Use it to catch a regression when the plugin, a skill or the model changes, to see which step a
 drop first appears in, and to compare two grill implementations on the same scenarios.
 
-Everything here is simulated data. A run sends nothing to the `events`, `content` or `feedback`
-tables: telemetry and content logging are switched off in every temporary work repo, and a run
-stops with an error if content logging ran anyway.
+Everything here is simulated data, and it stays apart from real use. Every temporary work repo
+sets `DAILY_WORK_TARGET=test`, so its telemetry and content logging go to the test group, the
+schema `sim` (`sim.events`, `sim.content`, `sim.feedback`), never to the real tables in `public`.
+A run stops with an error if that switch changed during the run. The simulated sessions can then
+be judged and shown like real ones: `sessions.py --target test`, `build.py --target test`.
 
 ## What a run does
 
@@ -36,6 +38,7 @@ python3 evals/run.py run --scenario 01-supplier-memo --runs 1
 python3 evals/run.py baseline <run-id>                      # save that run as the baseline
 python3 evals/run.py calibrate <run-id-a> <run-id-b>        # measure the noise between two runs
 python3 evals/run.py push <run-id>                          # store a run in Supabase by hand
+python3 evals/run.py analyse <run-id>                       # topics and confusion, by hand
 python3 -m unittest tests.test_evals                        # the scoring and comparison tests
 ```
 
@@ -133,6 +136,47 @@ Claude Code writes into the folder are left out of the sum. The sha256 is in eve
 Whatever the implementation, the generated `AGENTS.md` is what tells the session to end by
 writing the task file and deleting the brief.
 
+## Analysis
+
+After a complete run, one more call to the judge model reads every run's grill and work
+conversations and the judge's reasons, and writes `analysis.json` next to the run's summary:
+
+- **Topics**: what the conversations dealt with (audience, dates, figures from the documents and
+  so on), at most six kinds, three bullets each on how the plugin handled them.
+- **Confusion**: where the plugin, the simulated user or two steps did not understand each
+  other, at most six kinds, three bullets each.
+
+Every bullet is one sentence of at most 25 words; a reply that breaks this is asked for again, told what was wrong, up to three times.
+
+Each kind names the runs it comes from. The dashboard's Eval tab shows the latest run's
+(`dashboard/build.py`). It is a model's reading, like the judge's: check a claim against the
+steps it names before acting on it. `analyse <run-id>` makes it for a run that has none.
+
+## Real sessions
+
+`evals/sessions.py` judges real sessions afterwards, in a batch, with the same judge model:
+
+```
+SUPABASE_SERVICE_KEY=... python3 evals/sessions.py [--target real|test] [--limit 50] [--days 7] [--dry-run]
+```
+
+`--target real` (the default) judges real use, the tables in `public`; `--target test` judges
+the test group, the same tables in the schema `sim` (`supabase/migrations/20261014040000_sim_schema.sql`):
+the eval's simulated sessions and your own tries with `DAILY_WORK_TARGET=test`.
+
+1. Every brief, grill and record run in the table `content` that has no score yet is scored 1
+   to 5 on the rubric for its skill (`session_rubrics` in `config.json`), into `session_scores`.
+2. The runs judged in the last `--days` are grouped into topics and confusion, three bullets
+   each as for the eval, into `session_analysis`.
+
+The judge sees what `content` holds: the person's prompts, the assistant's replies and the
+names of the files written, not their contents. So the rubric is about the conversation (were
+the questions needed, was it clear what was settled), not the output. It is told not to quote
+people, but its words can still echo theirs, so reasons are cleared and analyses deleted after
+30 days, as `content` itself is. Both tables are read and written with the secret key only
+(`supabase/migrations/20261014020000_session_judging.sql`); run the batch in your own terminal
+or as a scheduled job, at least every 30 days, before `content` deletes the runs.
+
 ## What is scored
 
 Checks on files are exact. Judge scores are 1 to 5 per criterion with a one-sentence reason, by
@@ -199,15 +243,25 @@ their default.
 
 ## Supabase
 
-Every complete run (every scenario, `runs_per_scenario` runs each) writes one row per scenario
-and step to the table `eval_runs`. A trial on some scenarios, or with fewer runs, is not stored,
-so the table holds only runs that can be compared with one another. A row holds plugin
-version, grill implementation, model, scenario, step, metrics and date. The table is made by
+Every complete run (every scenario, `runs_per_scenario` runs each) writes to two tables:
+
+| Table | One row per | Holds |
+| --- | --- | --- |
+| `eval_runs` | run, scenario and step | the metrics as mean, spread and count over the runs; scenario `ALL` is the overall |
+| `eval_steps` | run, scenario, run number and step | what went into the step, what came out, the conversation, the metrics, the file checks and the judge's reasons |
+
+For `eval_steps`, the input and output of each step are: brief, the request and the brief;
+grill, the brief and the task file; work, the task file and every changed file in `outputs/`;
+record, the task file before and after; end to end, the request and the final task file.
+
+A trial on some scenarios, or with fewer runs, is not stored, so the tables hold only runs
+that can be compared with one another. `eval_runs` is made by
 `supabase/migrations/20261013000000_eval_runs.sql` and
-`supabase/migrations/20261014000000_eval_runs_insert.sql`.
+`supabase/migrations/20261014000000_eval_runs_insert.sql`; `eval_steps` by
+`supabase/migrations/20261014010000_eval_steps.sql`.
 
 A run is written with the publishable key and URL in `telemetry.json`, as telemetry is. That key
-can insert into `eval_runs` and do nothing else: it cannot read, change or delete a row. No
+can insert into `eval_runs` and `eval_steps` and do nothing else: it cannot read, change or delete a row. No
 secret key is needed to run the eval. A run already stored is refused as a whole, not
 duplicated. Reading the rows, for a dashboard, takes the secret key.
 

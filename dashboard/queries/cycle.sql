@@ -1,0 +1,3 @@
+-- cycle: Cycle time, brief to record
+-- Tasks started and closed, with median and p75 minutes from /brief to the first /record. Reads public.events.
+with e as (select * from public.events where install_id <> '11111111-1111-4111-8111-111111111111'), t as (select task_id, min(ts) filter (where event = 'brief') as b, min(ts) filter (where event = 'record') as r from e where task_id is not null group by task_id) select count(*) filter (where b is not null) as started, count(*) filter (where b is not null and r is not null) as closed, round((percentile_cont(0.5) within group (order by extract(epoch from r - b) / 60))::numeric, 1) as p50_min, round((percentile_cont(0.75) within group (order by extract(epoch from r - b) / 60))::numeric, 1) as p75_min from t;

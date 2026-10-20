@@ -438,6 +438,36 @@ class Scenarios(unittest.TestCase):
         row = report.supabase_rows(summary("r", "g", brief__goal_captured=5.0))[0]
         self.assertEqual({c.strip() for c in granted.split(",")}, set(row))
 
+    def test_step_rows_carry_input_output_and_reasons(self):
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder)
+        run_dir = folder / "a" / "run-1"
+        run_dir.mkdir(parents=True)
+        files = {"brief": "B", "task_after_grill": "T1", "task_after_work": "T1", "task_final": "T2",
+                 "outputs": {"p/outputs/x.md": "X"}}
+        (run_dir / "run.json").write_text(json.dumps({"files": files, "transcripts": {"grill": [{"role": "user", "text": "q"}]}}))
+        metrics = {step: {"completed": 1} for step in scoring.STEPS}
+        (run_dir / "scores.json").write_text(json.dumps({"metrics": metrics, "checks": {"grill": {"heading": True}},
+                                                         "reasons": {"work": {"meets_task": "ok"}}}))
+        s = summary("r", "g", brief__goal_captured=5.0)
+        s["runs"] = [{"scenario": "a", "run": 1}]
+        rows = {r["step"]: r for r in report.step_rows(s, folder, lambda name: "REQ")}
+        self.assertEqual(list(rows), scoring.STEPS)
+        self.assertEqual((rows["brief"]["input"], rows["brief"]["output"]), ("REQ", "B"))
+        self.assertEqual((rows["grill"]["input"], rows["grill"]["output"]), ("B", "T1"))
+        self.assertEqual(rows["work"]["output"], "=== p/outputs/x.md\nX")
+        self.assertEqual((rows["end_to_end"]["input"], rows["end_to_end"]["output"]), ("REQ", "T2"))
+        self.assertEqual(rows["grill"]["transcript"], [{"role": "user", "text": "q"}])
+        self.assertEqual(rows["grill"]["checks"], {"heading": True})
+        self.assertEqual(rows["work"]["reasons"], {"meets_task": "ok"})
+
+    def test_the_publishable_key_may_insert_every_column_a_step_row_carries(self):
+        sql = (REPO / "supabase" / "migrations" / "20261014010000_eval_steps.sql").read_text()
+        granted = re.search(r"grant insert \(([^)]*)\)\s+on public\.eval_steps to anon;", sql).group(1)
+        columns = {"run_id", "run_date", "plugin_version", "grill", "model", "scenario", "run", "step", "completed",
+                   "input", "output", "transcript", "metrics", "checks", "reasons"}
+        self.assertEqual({c.strip() for c in granted.split(",")}, columns)
+
     def test_no_key_is_committed_under_evals(self):
         for p in (REPO / "evals").rglob("*"):
             if p.is_file() and "runs" not in p.relative_to(REPO / "evals").parts and p.suffix in (".py", ".json", ".md"):

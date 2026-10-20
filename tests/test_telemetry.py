@@ -137,6 +137,13 @@ class SupabasePayloads(TelemetryCase):
         self.assertEqual(r.get_header("Apikey"), "anon-key")
         self.assertEqual(r.get_header("Prefer"), "return=minimal")
         self.assertEqual(r.get_header("Content-type"), "application/json")
+        self.assertEqual(r.get_header("Content-profile"), "public")
+
+    def test_test_sessions_go_to_the_sim_schema(self):
+        with mock.patch.dict(os.environ, {"DAILY_WORK_TARGET": "test"}):
+            self.assertEqual(telemetry.request("events", b"{}").get_header("Content-profile"), "sim")
+        with mock.patch.dict(os.environ, {"DAILY_WORK_TARGET": "real"}):
+            self.assertEqual(telemetry.request("events", b"{}").get_header("Content-profile"), "public")
 
     def test_no_rating_is_asked_for_or_sent(self):
         self.assertNotIn("rating", (REPO / "scripts" / "telemetry.py").read_text())

@@ -6,6 +6,7 @@ run.py step STEP --from RUN_FOLDER      one step again, from the repo saved befo
 run.py baseline RUN_ID [--grill NAME]   save that run as the baseline for its grill implementation
 run.py calibrate RUN_A RUN_B [--grill NAME] [--leave-out SCENARIO ...]
                                         how much two runs of the same code differ: the noise
+run.py analyse RUN_ID [--grill NAME]    topics and confusion over a run's conversations
 run.py push RUN_ID [--grill NAME]       summary rows to the Supabase table eval_runs
 run.py pin NAME                         print the sha256 of a grill implementation's folder
 """
@@ -18,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from pathlib import Path
 
+import analyse
 import flow
 import judge
 import report
@@ -114,22 +116,46 @@ def finish(cfg, run_id, grill, sha, names, runs, steps, scored, wall):
     # Only a complete run goes to the dashboard: every scenario, the configured runs each.
     # A trial on one scenario or with --runs 1 stays on disk; push it by hand if it should count.
     if steps == flow.FLOW and names == scenario_names(None) and runs == cfg["runs_per_scenario"]:
+        run_analysis(summary, cfg)
         store(summary)
+        # The standalone dashboard, rebuilt with this run in it.
+        built = subprocess.run([sys.executable, str(HERE.parent / "dashboard" / "build.py")], capture_output=True, text=True)
+        print(built.stdout.strip() or f"dashboard not rebuilt: {built.stderr.strip()[-300:]}")
     elif steps == flow.FLOW:
         print("not stored in eval_runs: not a complete run (every scenario, "
               f"{cfg['runs_per_scenario']} runs each)")
     return summary
 
 
-def store(summary):
-    """Every complete run goes to the Supabase table eval_runs. A run that cannot be stored is
-    kept on disk and says so; `run.py push RUN_ID` stores it later."""
-    run_id = summary["meta"]["run_id"]
+def request_for(summary):
+    run_date = date.fromisoformat(summary["meta"]["date"])
+    return lambda name: flow.load_scenario(SCENARIOS / name, run_date)["request"]
+
+
+def run_analysis(summary, cfg):
+    """Topics and confusion over a complete run, for the dashboard. A run is kept without one if
+    the analysis fails; `run.py analyse RUN_ID` makes it later."""
+    meta = summary["meta"]
     try:
-        n = report.push(summary)
-        print(f"stored in eval_runs: {n} rows" if n else "eval_runs already holds this run; nothing written")
+        result = analyse.analyse(summary, RUNS / meta["run_id"] / meta["grill"], request_for(summary), cfg)
+        print(f"analysis: {len(result['topics'])} topics, {len(result['confusion'])} kinds of confusion")
     except (OSError, ValueError, KeyError, RuntimeError) as e:
-        print(f"NOT STORED in eval_runs: {e}. Later: python3 evals/run.py push {run_id}")
+        print(f"NO ANALYSIS: {e}. Later: python3 evals/run.py analyse {meta['run_id']}")
+
+
+def store(summary):
+    """Every complete run goes to Supabase: its summary to eval_runs, each step's input, output,
+    conversation and scores to eval_steps. A run that cannot be stored is kept on disk and says
+    so; `run.py push RUN_ID` stores it later."""
+    meta = summary["meta"]
+    try:
+        steps = report.step_rows(summary, RUNS / meta["run_id"] / meta["grill"], request_for(summary))
+        for table, n in report.push(summary, steps).items():
+            print(f"stored in {table}: {n} rows" if n else f"{table} already holds this run; nothing written")
+        # The dashboard build (dashboard/build.py) shows the runs marked stored.
+        (RUNS / meta["run_id"] / meta["grill"] / "stored.json").write_text(json.dumps({"tables": ["eval_runs", "eval_steps"]}))
+    except (OSError, ValueError, KeyError, RuntimeError) as e:
+        print(f"NOT STORED: {e}. Later: python3 evals/run.py push {meta['run_id']}")
 
 
 def cmd_run(args):
@@ -217,6 +243,13 @@ def cmd_calibrate(args):
     print(f"noise for {grill} from runs {args.run_a} and {args.run_b}, {len(metrics)} metrics: {path}")
 
 
+def cmd_analyse(args):
+    summary, _ = load_summary(args.run_id, args.grill)
+    if summary["meta"]["steps"] != flow.FLOW:
+        refuse("analyse a full run, not a single step")
+    run_analysis(summary, config())
+
+
 def cmd_push(args):
     summary, _ = load_summary(args.run_id, args.grill)
     store(summary)
@@ -253,6 +286,10 @@ if __name__ == "__main__":
     p.add_argument("--grill")
     p.add_argument("--leave-out", action="append", help="a scenario that changed between the two runs")
     p.set_defaults(run=cmd_calibrate)
+    p = sub.add_parser("analyse", help="topics and confusion over a run's conversations")
+    p.add_argument("run_id")
+    p.add_argument("--grill")
+    p.set_defaults(run=cmd_analyse)
     p = sub.add_parser("push", help="write a run's summary rows to Supabase")
     p.add_argument("run_id")
     p.add_argument("--grill")

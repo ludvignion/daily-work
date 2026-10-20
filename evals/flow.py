@@ -19,6 +19,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FLOW = ["brief", "grill", "work", "record"]
+# Simulated sessions send telemetry and content like real ones, but to the test group (schema sim).
+TEST_GROUP = {"DAILY_WORK_TARGET": "test", "DAILY_WORK_TELEMETRY": "1", "DAILY_WORK_CONTENT": "1"}
 MAX_FILE = 60000
 # tokens is the sum of the other three. Cached input is most of it and much the cheapest.
 TOKENS = ("tokens", "tokens_input", "tokens_cached", "tokens_output")
@@ -101,8 +103,10 @@ def tree_hash(folder):
 
 def claude(prompt, cwd, model, cfg, log, session=None, resume=False, plugin_dirs=(), tools=()):
     """One `claude -p` call. Returns the reply text and what it cost; writes the raw event log."""
-    cmd = ["claude", "-p", prompt, "--model", model, "--output-format", "stream-json", "--verbose",
-           "--setting-sources", "project"]
+    # One argument may hold at most 128 KB on Linux; a longer prompt goes in on stdin.
+    piped = len(prompt.encode()) > 100_000
+    cmd = ["claude", "-p", *([] if piped else [prompt]), "--model", model, "--output-format", "stream-json",
+           "--verbose", "--setting-sources", "project"]
     if session:
         cmd += ["--resume", session] if resume else ["--session-id", session]
     else:
@@ -110,9 +114,10 @@ def claude(prompt, cwd, model, cfg, log, session=None, resume=False, plugin_dirs
     for d in plugin_dirs:
         cmd += ["--plugin-dir", str(d)]
     cmd += ["--allowedTools", *tools] if tools else ["--tools", ""]
-    env = {**os.environ, "DAILY_WORK_TELEMETRY": "0", "DAILY_WORK_CONTENT": "0"}
+    env = {**os.environ, **TEST_GROUP}
     started = time.time()
-    done = subprocess.run(cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+    done = subprocess.run(cmd, cwd=cwd, env=env, input=prompt if piped else None,
+                          stdin=None if piped else subprocess.DEVNULL, capture_output=True, text=True,
                           timeout=cfg["call_timeout_seconds"])
     Path(log).parent.mkdir(parents=True, exist_ok=True)
     Path(log).write_text(done.stdout)
@@ -158,12 +163,11 @@ def git(repo, *args):
 
 
 def start_repo(scenario):
-    """A work repo as /daily-work:init leaves it, with telemetry and content logging off."""
+    """A work repo as /daily-work:init leaves it, sending telemetry and content to the test group."""
     repo = Path(tempfile.mkdtemp(prefix="daily-work-eval-"))
     subprocess.run(["bash", str(ROOT / "scripts" / "init.sh")], cwd=repo, check=True, capture_output=True)
-    # init's settings.json turns both on, and project settings win over the environment.
-    (repo / ".claude" / "settings.json").write_text(
-        json.dumps({"env": {"DAILY_WORK_TELEMETRY": "0", "DAILY_WORK_CONTENT": "0"}}, indent=2) + "\n")
+    # Project settings win over the environment, so the test group is set here too.
+    (repo / ".claude" / "settings.json").write_text(json.dumps({"env": TEST_GROUP}, indent=2) + "\n")
     git(repo, "config", "user.email", "eval@example.invalid")
     git(repo, "config", "user.name", "daily-work eval")
     if scenario["seed"]:
@@ -313,8 +317,9 @@ def run_flow(scenario, cfg, grill, out, steps=FLOW, snapshot=None):
             if (repo / "CONTEXT.md").is_file():
                 files["context"] = read_text(repo / "CONTEXT.md")
             shutil.copytree(repo, out / "snapshots" / f"after-{step}", symlinks=True, dirs_exist_ok=True)
-        if list(repo.glob("*/tasks/.*.content-id")):
-            raise RuntimeError("content logging ran during an eval run; rows were sent to Supabase")
+        # Every row must have gone to the test group: the switch is still as start_repo wrote it.
+        if json.loads((repo / ".claude" / "settings.json").read_text()).get("env", {}).get("DAILY_WORK_TARGET") != "test":
+            raise RuntimeError("the run changed DAILY_WORK_TARGET in .claude/settings.json; rows may have reached the real tables")
     except (RuntimeError, subprocess.TimeoutExpired) as error:
         record["error"] = str(error)
     finally:
