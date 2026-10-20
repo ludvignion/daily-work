@@ -1,0 +1,3 @@
+-- hourly: Completion by hour
+-- Share of tasks briefed in each hour of the last 7 days that reached /record. Reads public.events.
+with e as (select * from public.events where install_id <> '11111111-1111-4111-8111-111111111111'), t as (select task_id, min(ts) filter (where event = 'brief') as b, bool_or(event = 'record') as rec from e where task_id is not null group by task_id) select to_char(date_trunc('hour', b at time zone 'UTC'), 'YYYY-MM-DD"T"HH24:00:00"Z"') as hour, count(*) as started, count(*) filter (where rec) as recorded, round(count(*) filter (where rec)::numeric / count(*), 3) as completion from t where b is not null and b >= now() - interval '7 days' group by 1 order by 1;

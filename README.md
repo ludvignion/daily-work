@@ -268,6 +268,11 @@ that starts the agent, for example `export DAILY_WORK_CONTENT=0` in `~/.bashrc`.
 If the repo already had a `.claude/settings.json`, init leaves it alone: add the `env` lines
 yourself.
 
+A third switch, `DAILY_WORK_TARGET`, is for the plugin author's own tries. Set to `test`, it
+sends telemetry and content to the test tables (schema `sim`) instead of the real ones, so
+tries do not mix with real use. Leave it out for real work. Put it in the `env` of a test repo's
+`.claude/settings.local.json`, never in `.env`, which the plugin does not read.
+
 ## Telemetry
 
 The plugin author uses this to see whether the brief, grill, record loop gets used and where

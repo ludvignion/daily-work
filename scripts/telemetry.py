@@ -33,6 +33,11 @@ content, transcripts.
 Opt out: set DAILY_WORK_TELEMETRY=0. Details: the plugin README, "Telemetry"."""
 
 
+def schema():
+    """The table group rows go to: sim for test sessions (DAILY_WORK_TARGET=test), public otherwise."""
+    return "sim" if os.environ.get("DAILY_WORK_TARGET") == "test" else "public"
+
+
 def opted_out():
     return os.environ.get("DAILY_WORK_TELEMETRY") == "0"
 
@@ -118,11 +123,13 @@ def send(table, payload):
 
 
 def request(table, body):
-    """An insert into a Supabase table through its REST API, asking for nothing back."""
+    """An insert into a Supabase table through its REST API, asking for nothing back. The
+    Content-Profile header picks the schema: the same tables exist in public and in sim."""
     url, key = config()
     return urllib.request.Request(f"{url}/rest/v1/{table}", data=body, method="POST", headers={
         "apikey": key,
         "Content-Type": "application/json",
+        "Content-Profile": schema(),
         "Prefer": "return=minimal",
     })
 

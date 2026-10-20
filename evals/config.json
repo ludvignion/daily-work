@@ -14,7 +14,16 @@
     "work": 4,
     "record": 1
   },
-  "plugin_tools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "Skill", "Agent"],
+  "plugin_tools": [
+    "Bash",
+    "Read",
+    "Write",
+    "Edit",
+    "Glob",
+    "Grep",
+    "Skill",
+    "Agent"
+  ],
   "grills": {
     "mattpocock-1.2.3": {
       "plugin_dir": "~/.claude/plugins/cache/claude-plugins-official/mattpocock-skills/1.2.3",
@@ -24,7 +33,11 @@
     }
   },
   "default_grill": "mattpocock-1.2.3",
-  "estimate_per_run": {"tokens": 800000, "minutes": 3, "usd_at_api_prices": 1.2},
+  "estimate_per_run": {
+    "tokens": 800000,
+    "minutes": 3,
+    "usd_at_api_prices": 1.2
+  },
   "thresholds": {
     "score": 0.5,
     "share": 0.15,
@@ -50,6 +63,20 @@
     },
     "end_to_end": {
       "request_to_done": "Taking the original request and the hidden facts as what the person really wanted: would they accept the final output as it is? 5: yes, as is. 3: after small fixes. 1: no."
+    }
+  },
+  "session_rubrics": {
+    "brief": {
+      "goal_captured": "The brief the assistant wrote says what the person wants, as their request states it. 5: the goal is unmistakable. 1: missing or wrong.",
+      "nothing_invented": "The brief states only what the person said. Open points are left open. 5: nothing added. 1: several invented facts or decisions."
+    },
+    "grill": {
+      "questions_needed": "Each question asks for something the task needs and the person can answer; nothing asked twice, nothing the person had already said. 5: every question earned its place. 1: mostly padding.",
+      "settled_clearly": "By the end it is clear what was decided, what was assumed and what is out of scope, in the assistant's own words. 5: a person could start work from it. 1: nothing settled."
+    },
+    "record": {
+      "result_clear": "The record's closing message says what was done and where the output is, plainly. 5: clear. 1: missing or confusing.",
+      "caveats_named": "It names what was assumed or not checked, and the Done lines left for a person to check. 5: complete. 1: none named when there clearly were some."
     }
   }
 }

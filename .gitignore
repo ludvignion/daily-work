@@ -3,3 +3,4 @@ metrics-out/
 .env
 content.jsonl
 evals/runs/
+dashboard/out/

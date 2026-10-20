@@ -117,20 +117,67 @@ def supabase_rows(summary):
              "metrics": metrics} for (scenario, step), metrics in grouped.items()]
 
 
-def push(summary):
-    """Insert the summary rows into eval_runs with the publishable key from telemetry.json, which
-    can insert and nothing else. Returns the number of rows written, or 0 when the run is already
-    stored: the table refuses a second copy of a run as a whole."""
+# What went into each step and what came out of it, from the files a run saved.
+STEP_IO = {
+    "brief": (lambda f, request: request, lambda f: f.get("brief", "")),
+    "grill": (lambda f, request: f.get("brief", ""), lambda f: f.get("task_after_grill", "")),
+    "work": (lambda f, request: f.get("task_after_grill", ""), lambda f: outputs_text(f)),
+    "record": (lambda f, request: f.get("task_after_work", ""), lambda f: f.get("task_final", "")),
+    "end_to_end": (lambda f, request: request, lambda f: f.get("task_final", "")),
+}
+
+
+def outputs_text(files):
+    """Every file the work step changed in outputs/, each under its path; the task file too when
+    the work was written there."""
+    parts = [f"=== {path}\n{text}" for path, text in sorted((files.get("outputs") or {}).items())]
+    if files.get("task_after_work") and files.get("task_after_work") != files.get("task_after_grill"):
+        parts.append(f"=== task file after work\n{files['task_after_work']}")
+    return "\n\n".join(parts)
+
+
+def step_rows(summary, folder, request_for):
+    """One row per run, scenario and step for eval_steps, from each run's run.json and scores.json
+    under `folder`. request_for(scenario) gives the request the run started from."""
+    meta, rows = summary["meta"], []
+    for r in summary["runs"]:
+        run_dir = Path(folder) / r["scenario"] / f"run-{r['run']}"
+        record = json.loads((run_dir / "run.json").read_text())
+        scores = json.loads((run_dir / "scores.json").read_text())
+        files, request = record.get("files") or {}, request_for(r["scenario"])
+        for step in meta["steps"] + (["end_to_end"] if meta["steps"] == scoring.STEPS[:4] else []):
+            given, made = STEP_IO[step]
+            metrics = scores["metrics"].get(step, {})
+            rows.append({
+                "run_id": meta["run_id"], "run_date": meta["date"], "plugin_version": meta["plugin_version"],
+                "grill": meta["grill"], "model": meta["config"]["models"]["plugin"], "scenario": r["scenario"],
+                "run": r["run"], "step": step, "completed": bool(metrics.get("completed")),
+                "input": given(files, request), "output": made(files),
+                "transcript": (record.get("transcripts") or {}).get(step, []),
+                "metrics": metrics, "checks": (scores.get("checks") or {}).get(step, {}),
+                "reasons": (scores.get("reasons") or {}).get(step, {}),
+            })
+    return rows
+
+
+def push(summary, steps=None):
+    """Insert the summary rows into eval_runs and, when given, the step rows into eval_steps, with
+    the publishable key from telemetry.json, which can insert and nothing else. Returns the rows
+    written per table; 0 for a table that already holds the run, since it refuses a second copy."""
+    return {"eval_runs": insert("eval_runs", supabase_rows(summary)),
+            **({"eval_steps": insert("eval_steps", steps)} if steps is not None else {})}
+
+
+def insert(table, rows):
     config = json.loads((ROOT / "telemetry.json").read_text())
-    rows = supabase_rows(summary)
     request = urllib.request.Request(
-        f"{config['url'].rstrip('/')}/rest/v1/eval_runs", data=json.dumps(rows).encode(), method="POST",
+        f"{config['url'].rstrip('/')}/rest/v1/{table}", data=json.dumps(rows).encode(), method="POST",
         headers={"apikey": config["anon_key"], "Content-Type": "application/json", "Prefer": "return=minimal"})
     try:
-        with urllib.request.urlopen(request, timeout=30):
+        with urllib.request.urlopen(request, timeout=60):
             pass
     except urllib.error.HTTPError as e:
         if e.code == 409:
             return 0
-        raise RuntimeError(f"eval_runs refused the rows: HTTP {e.code} {e.read().decode(errors='replace')[:300]}") from e
+        raise RuntimeError(f"{table} refused the rows: HTTP {e.code} {e.read().decode(errors='replace')[:300]}") from e
     return len(rows)

@@ -1,0 +1,3 @@
+-- eval_overview: Eval scores per run, overall
+-- The mean, lowest and highest scenario mean of every judge score and share, per complete eval run, from the overall rows. Reads public.eval_runs (simulated data only).
+select r.run_id, r.run_date::text as run_date, r.plugin_version as version, r.step, m.key as metric, (m.value->>'mean')::numeric as mean, (m.value->>'min')::numeric as low, (m.value->>'max')::numeric as high from public.eval_runs r, jsonb_each(r.metrics) m where r.scenario = 'ALL' and m.key not in ('turns', 'tokens', 'tokens_input', 'tokens_cached', 'tokens_output', 'cost_usd', 'seconds', 'rounds') order by r.run_id, r.step, m.key;

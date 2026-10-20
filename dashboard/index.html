@@ -1,0 +1,975 @@
+<script>
+// Opened straight from the repo, the page has no dashboard runtime and no data. Say where the
+// built page is instead of showing an empty one.
+if (!window.dash) {
+  document.body.textContent = 'This is the dashboard source. Run python3 dashboard/build.py and open dashboard/out/index.html#eval instead.';
+  throw new Error('no dashboard runtime');
+}
+</script>
+<style>
+#dash-root .dw { font-family: var(--font-anthropic-sans); display: flex; flex-direction: column; gap: var(--cds-gap-lg); }
+#dash-root .dw-title { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; }
+#dash-root .dw-take { color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 0; font-size: var(--cds-font-size-body); }
+#dash-root .dw-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--cds-gap-md); }
+#dash-root .dw-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+#dash-root .dw-label { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+#dash-root .dw-big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; margin-top: var(--cds-gap-xs); min-height: 1.4em; }
+#dash-root .dw-sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-xs); }
+#dash-root .dw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--cds-gap-md); }
+#dash-root .dw-h { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+#dash-root .dw-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: var(--cds-gap-xs) 0 var(--cds-gap-md); }
+#dash-root .dw-chart { position: relative; min-height: 200px; }
+#dash-root .dw-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; display: none; z-index: 2; }
+#dash-root .dw-tip .k { color: var(--cds-text-secondary); }
+#dash-root .dw-legend { display: flex; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-bottom: var(--cds-gap-sm); flex-wrap: wrap; }
+#dash-root .dw-legend i { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 2px; margin-right: 0.35rem; vertical-align: middle; }
+#dash-root .dw-tablebox { max-height: 26rem; overflow: auto; }
+#dash-root table.dw-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); font-variant-numeric: tabular-nums; }
+#dash-root .dw-table th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); }
+#dash-root .dw-table td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); }
+#dash-root .dw-table .num { text-align: right; }
+#dash-root .dw-table .yes { color: var(--color-ok); }
+#dash-root .dw-table .no { color: var(--color-fg-muted); }
+#dash-root .dw-fail { display: flex; align-items: center; justify-content: center; gap: var(--cds-gap-xs); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); min-height: inherit; }
+#dash-root .dw-fail::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--color-bad); }
+#dash-root [data-dash-source-state=empty] { color: transparent; }
+#dash-root [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+@media (max-width: 40rem) { #dash-root .dw-hide-narrow { display: none; } }
+
+#dash-root .dw-tabs { display: flex; gap: var(--cds-gap-xs); border-bottom: 1px solid var(--color-border-line); margin-bottom: var(--cds-gap-lg); }
+#dash-root .dw-tab { font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body); background: none; border: 0; border-bottom: 2px solid transparent; color: var(--color-fg-muted); padding: var(--cds-pad-sm) var(--cds-pad-md); cursor: pointer; margin-bottom: -1px; }
+#dash-root .dw-tab[aria-selected="true"] { color: var(--color-fg); border-bottom-color: var(--color-fg); font-weight: var(--cds-font-weight-medium); }
+#dash-root .ob { --ob-ink: #111111; --ob-paper: #FBF9F4; --ob-plum: #A04F7B; --ob-pink: #E987BE; --ob-pinklight: #F4B4D9; --ob-cream: #FFFFC4; --ob-sky: #A8D8FA; --ob-yellow: #FFFF73; --ob-red: #D23A1F; --ob-redtext: #B02E15; --ob-green: #6E8B2A; --ob-navy: #0D1B2E; --ob-blue: #376B94;
+  font-family: var(--font-anthropic-sans); color: var(--ob-ink); background: var(--ob-paper); border-radius: var(--cds-radius); padding: clamp(16px, 3vw, 32px); display: flex; flex-direction: column; gap: 20px; }
+#dash-root .ob-serif { font-family: var(--font-anthropic-serif); font-weight: 400; letter-spacing: -0.02em; }
+#dash-root .ob-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+#dash-root .ob-brand { font-weight: 700; font-size: 1.6rem; letter-spacing: -0.02em; }
+#dash-root .ob-brand small { font-weight: 400; font-size: 0.9rem; margin-left: 10px; }
+#dash-root .ob-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+#dash-root .ob-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; padding: 5px 10px; border: 2px solid var(--ob-pink); background: var(--ob-paper); color: var(--ob-ink); }
+#dash-root .ob-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ob-red); border: 1.5px solid var(--ob-ink); }
+#dash-root .ob-card { border-radius: 20px; padding: clamp(16px, 2.5vw, 26px); min-width: 0; box-sizing: border-box; }
+#dash-root .ob-hero { background: var(--ob-plum); color: #FFFFFF; display: flex; flex-direction: column; gap: 14px; }
+#dash-root .ob-hero .ob-tag { align-self: flex-start; }
+#dash-root .ob-hero .ob-tag.bad { background: var(--ob-red); border-color: var(--ob-ink); color: #FFFFFF; }
+#dash-root .ob-hero .ob-tag.good { background: var(--ob-green); border-color: var(--ob-ink); color: var(--ob-ink); }
+#dash-root .ob-hero-h { margin: 0; font-size: clamp(1.15rem, 2.2vw, 1.6rem); line-height: 1.25; min-height: 1.1em; }
+#dash-root .ob-hero-h .hl { color: var(--ob-pinklight); }
+#dash-root .ob-hero p { margin: 0; font-size: 1rem; line-height: 1.5; }
+#dash-root .ob-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 14px; }
+#dash-root .ob-kpi { display: flex; flex-direction: column; gap: 8px; }
+#dash-root .ob-kpi:nth-child(odd) { background: var(--ob-cream); }
+#dash-root .ob-kpi:nth-child(even) { background: var(--ob-sky); }
+#dash-root .ob-label { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #3B3B3B; }
+#dash-root .ob-big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: clamp(2.4rem, 5vw, 3.8rem); line-height: 0.95; font-variant-numeric: tabular-nums; min-height: 1em; }
+#dash-root .ob-sub { font-size: 14px; }
+#dash-root .ob-row { display: flex; flex-wrap: wrap; gap: 14px; }
+#dash-root .ob-wide { flex: 999 1 560px; background: #FFFFFF; border: 2px solid var(--ob-ink); display: flex; flex-direction: column; gap: 12px; }
+#dash-root .ob-side { flex: 1 1 340px; display: flex; flex-direction: column; gap: 12px; }
+#dash-root .ob-h { margin: 0; font-size: clamp(1.6rem, 3vw, 2.4rem); line-height: 1; }
+#dash-root .ob-note { font-size: 13px; color: #3B3B3B; margin: 0; }
+#dash-root .ob-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+#dash-root .ob-legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+#dash-root .ob-chart { position: relative; min-height: 240px; }
+#dash-root .ob-tbl { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+#dash-root .ob-tbl th { text-align: left; font-weight: 600; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #3B3B3B; padding: 8px 10px; border-bottom: 2px solid var(--ob-ink); }
+#dash-root .ob-tbl td { padding: 11px 10px; border-bottom: 1px solid rgba(17,17,17,0.15); vertical-align: middle; }
+#dash-root .ob-tbl .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+#dash-root .ob-tbl .worse { color: var(--ob-redtext); font-weight: 600; }
+#dash-root .ob-tbl tr.pick { background: var(--ob-cream); }
+#dash-root .ob-tbl tbody tr[data-key] { cursor: pointer; }
+#dash-root .ob-spans { display: flex; height: 16px; border: 1.5px solid var(--ob-ink); border-radius: 999px; overflow: hidden; background: var(--ob-paper); min-width: 120px; }
+#dash-root .ob-sw { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--ob-ink); vertical-align: middle; margin-right: 6px; }
+#dash-root .ob-steps { display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
+#dash-root .ob-steps > div { display: flex; justify-content: space-between; gap: 12px; }
+#dash-root .ob-bars { display: flex; flex-direction: column; gap: 12px; min-height: 120px; }
+#dash-root .ob-bar-row { display: flex; flex-direction: column; gap: 5px; font-size: 15px; }
+#dash-root .ob-bar-row > div:first-child { display: flex; justify-content: space-between; gap: 8px; }
+#dash-root .ob-track { height: 14px; background: var(--ob-paper); border: 1.5px solid var(--ob-ink); border-radius: 999px; overflow: hidden; display: flex; }
+#dash-root .ob-tbl td.reason { font-size: 14px; line-height: 1.45; min-width: 18rem; }
+#dash-root .ob-themes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; min-height: 6rem; }
+#dash-root .ob-themes li { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; position: relative; font-size: 15px; line-height: 1.45; }
+#dash-root .ob-themes li::before { content: ''; position: absolute; left: 0; top: 0.45em; width: 9px; height: 9px; border-radius: 50%; background: var(--ob-plum); border: 1.5px solid var(--ob-ink); }
+#dash-root .ob-themes .t { font-weight: 600; }
+#dash-root .ob-themes .n { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; margin-left: 8px; font-weight: 400; }
+#dash-root .ob-gaps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 14px; }
+#dash-root .ob-gap { background: #FFFFFF; border: 2px dashed var(--ob-ink); display: flex; flex-direction: column; gap: 6px; }
+#dash-root .ob-gap .ob-serif { font-size: 1.4rem; line-height: 1.1; }
+#dash-root .ob .dw-fail { color: #3B3B3B; }
+#dash-root .ob .dw-tip { color: var(--color-fg); }
+
+#dash-root #usage .dw-title { font-family: var(--font-anthropic-serif); font-size: clamp(1.8rem, 3.5vw, 2.6rem); color: var(--ob-ink); line-height: 1; }
+#dash-root #usage .dw-take { color: #3B3B3B; font-size: 1rem; }
+#dash-root #usage .dw-card { border-radius: 20px; padding: clamp(16px, 2.5vw, 26px); background: #FFFFFF; border: 2px solid var(--ob-ink); color: var(--ob-ink); }
+#dash-root #usage .dw-kpis { gap: 14px; }
+#dash-root #usage .dw-kpis .dw-card { border: 0; }
+#dash-root #usage .dw-kpis .dw-card:nth-child(odd) { background: var(--ob-cream); }
+#dash-root #usage .dw-kpis .dw-card:nth-child(even) { background: var(--ob-sky); }
+#dash-root #usage .dw-label { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #3B3B3B; }
+#dash-root #usage .dw-big { font-size: clamp(2.4rem, 5vw, 3.8rem); line-height: 0.95; margin-top: 8px; color: var(--ob-ink); }
+#dash-root #usage .dw-sub, #dash-root #usage .dw-note, #dash-root #usage .dw-legend { color: #3B3B3B; }
+#dash-root #usage .dw-h { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1; letter-spacing: -0.02em; }
+#dash-root #usage .dw-legend i { border: 1.5px solid var(--ob-ink); }
+#dash-root #usage #card-tasks-table { background: var(--ob-cream); border: 0; }
+#dash-root #usage .dw-table th { background: var(--ob-cream); color: #3B3B3B; border-bottom: 2px solid var(--ob-ink); text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+#dash-root #usage .dw-table td { border-bottom: 1px solid rgba(17,17,17,0.15); color: var(--ob-ink); }
+#dash-root #usage .dw-table .yes { color: var(--ob-green); font-weight: 600; }
+#dash-root #usage .dw-table .no { color: #3B3B3B; }
+#dash-root #usage .dw-fail { color: #3B3B3B; }
+#dash-root [hidden] { display: none !important; }
+
+#dash-root .ev-pick { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 14px; }
+#dash-root .ev-pick select { font: inherit; padding: 4px 8px; border: 2px solid var(--ob-ink); border-radius: 8px; background: #FFFFFF; color: var(--ob-ink); }
+#dash-root .ev-detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 14px; }
+#dash-root .ev-detail pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.45; max-height: 28rem; overflow: auto; background: var(--ob-paper); border: 1.5px solid var(--ob-ink); border-radius: 10px; padding: 10px; }
+#dash-root .ev-reasons { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.45; }
+#dash-root .ev-reasons b { font-weight: 600; }
+#dash-root .ob-themes ul li { display: list-item; list-style: disc; padding-left: 0; font-size: 14px; }
+#dash-root .ob-themes ul li::before { display: none; }
+</style>
+
+
+<nav class="dw-tabs" role="tablist" aria-label="Dashboard pages">
+  <button class="dw-tab" id="tab-usage" role="tab" data-tab="usage" aria-selected="true">Usage</button>
+  <button class="dw-tab" id="tab-observability" role="tab" data-tab="observability" aria-selected="false">Observability</button>
+  <button class="dw-tab" id="tab-eval" role="tab" data-tab="eval" aria-selected="false">Eval (simulated)</button>
+</nav>
+<div class="dw ob" id="usage" role="tabpanel">
+  <header id="overview">
+    <h1 class="dw-title">daily-work usage</h1>
+    <p class="dw-take"><span class="dash-skeleton" data-source="kpis" data-field="tasks_started" data-row="0">—</span> tasks started, <span class="dash-skeleton" data-source="kpis" data-field="tasks_recorded" data-row="0">—</span> recorded. Last activity <span class="dash-skeleton" data-source="kpis" data-field="last_event" data-row="0">—</span>.</p>
+  </header>
+
+  <section class="dw-kpis" id="headline">
+    <div class="dw-card" id="card-tasks">
+      <div class="dw-label">Tasks started</div>
+      <div class="dw-big dash-skeleton" data-source="kpis" data-field="tasks_started" data-row="0">—</div>
+      <div class="dw-sub">All time, a task begins with /brief</div>
+    </div>
+    <div class="dw-card" id="card-rate">
+      <div class="dw-label">Recorded rate</div>
+      <div class="dw-big dash-skeleton" data-source="kpis" data-field="record_rate" data-row="0">—</div>
+      <div class="dw-sub">Started tasks that reached /record</div>
+    </div>
+    <div class="dw-card" id="card-rating">
+      <div class="dw-label">Average rating</div>
+      <div class="dw-big dash-skeleton" data-source="kpis" data-field="avg_rating" data-row="0">—</div>
+      <div class="dw-sub">Out of 5, from <span data-source="kpis" data-field="ratings" data-row="0">—</span> rated task(s)</div>
+    </div>
+    <div class="dw-card" id="card-version">
+      <div class="dw-label">Latest plugin version</div>
+      <div class="dw-big dash-skeleton" data-source="kpis" data-field="latest_version" data-row="0">—</div>
+      <div class="dw-sub"><span data-source="kpis" data-field="installs" data-row="0">—</span> install(s) reporting</div>
+    </div>
+  </section>
+
+  <section class="dw-grid" id="flow">
+    <div class="dw-card" id="card-funnel">
+      <h2 class="dw-h">Brief → grill → record</h2>
+      <p class="dw-note">Distinct tasks reaching each step, all time</p>
+      <div class="dw-chart" id="chart-funnel" data-source="funnel"></div>
+    </div>
+    <div class="dw-card" id="card-daily">
+      <h2 class="dw-h">Skill runs per day</h2>
+      <p class="dw-note">Events per day (Stockholm time), by skill</p>
+      <div class="dw-legend" id="legend-daily" data-source="daily"></div>
+      <div class="dw-chart" id="chart-daily" data-source="daily"></div>
+    </div>
+  </section>
+
+  <section class="dw-card" id="card-tasks-table">
+    <h2 class="dw-h">Tasks</h2>
+    <p class="dw-note">One row per task, newest first. Duration is first to last event.</p>
+    <div class="dw-tablebox">
+      <table class="dw-table" id="table-tasks" data-source="tasks" data-row-key="task">
+        <thead><tr>
+          <th data-field="task">Task</th>
+          <th data-field="started">Started</th>
+          <th data-field="version" class="dw-hide-narrow">Version</th>
+          <th data-field="grilled">Grilled</th>
+          <th data-field="recorded">Recorded</th>
+          <th data-field="minutes" class="num">Minutes</th>
+          <th data-field="rating" class="num">Rating</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<section id="observability" role="tabpanel" hidden></section>
+<section id="eval" role="tabpanel" hidden></section>
+
+<template id="tpl-obs">
+<div class="ob">
+  <header class="ob-head">
+    <div class="ob-brand">TechSeed<small>daily-work · AI observability</small></div>
+    <div class="ob-tags"><span class="ob-tag"><span class="ob-dot"></span>Live</span><span class="ob-tag">All time</span><span class="ob-tag">All versions</span></div>
+  </header>
+
+
+  <section class="ob-kpis" id="obs-kpis">
+    <div class="ob-card ob-kpi"><div class="ob-label">Active installs</div><div class="ob-big dash-skeleton" data-source="kpis" data-field="installs" data-row="0">—</div><div class="ob-sub">reporting at least one event</div></div>
+    <div class="ob-card ob-kpi"><div class="ob-label">Tasks closed</div><div class="ob-big dash-skeleton" data-source="cycle" data-field="closed" data-row="0">—</div><div class="ob-sub">of <span data-source="cycle" data-field="started" data-row="0">—</span> started</div></div>
+    <div class="ob-card ob-kpi"><div class="ob-label">Completion rate</div><div class="ob-big dash-skeleton" data-source="kpis" data-field="record_rate" data-row="0">—</div><div class="ob-sub">started tasks that reached /record</div></div>
+    <div class="ob-card ob-kpi"><div class="ob-label">Median cycle time</div><div class="ob-big dash-skeleton"><span data-source="cycle" data-field="p50_min" data-row="0">—</span><small style="font-size:0.4em"> min</small></div><div class="ob-sub">p75 <span data-source="cycle" data-field="p75_min" data-row="0">—</span> min, brief to record</div></div>
+    <div class="ob-card ob-kpi"><div class="ob-label">Rating</div><div class="ob-big dash-skeleton" data-source="kpis" data-field="avg_rating" data-row="0">—</div><div class="ob-sub">average of <span data-source="kpis" data-field="ratings" data-row="0">—</span> rated task(s)</div></div>
+  </section>
+
+  <section class="ob-row">
+    <div class="ob-card ob-wide" id="obs-completion">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+        <h2 class="ob-serif ob-h">Completion rate by hour</h2>
+        <div class="ob-legend"><span><i style="width:20px;height:4px;background:var(--ob-plum)"></i>completion</span><span><i style="width:20px;border-top:2px dashed var(--ob-ink)"></i>all-time average</span><span><i style="width:3px;height:14px;background:var(--ob-green)"></i>release</span></div>
+      </div>
+      <p class="ob-note">Tasks started in each hour that reached /record, last 7 days. Stockholm time.</p>
+      <div class="ob-chart" id="obs-chart" data-source="hourly versions"></div>
+    </div>
+  </section>
+
+  <section class="ob-card" style="background:var(--ob-cream);display:flex;flex-direction:column;gap:12px" id="obs-judge">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2 class="ob-serif ob-h">LLM judge</h2>
+      <span class="ob-tag">Judged by Claude, afterwards</span>
+    </div>
+    <p class="ob-note">Each captured run scored 1 to 5 per criterion from its conversation, by evals/sessions.py. Overall is the average. Reasons are cleared after 30 days.</p>
+    <div style="overflow-x:auto">
+      <table class="ob-tbl" id="obs-judge-table" data-source="judge" data-row-key="run" style="min-width:640px">
+        <thead><tr><th data-field="task">Task</th><th data-field="skill">Skill</th><th data-field="overall">Overall</th><th data-field="scores">Scores</th><th data-field="verdict">Verdict</th><th data-field="reasoning" style="width:45%">Reasoning</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="ob-card" style="background:var(--ob-sky);display:flex;flex-direction:column;gap:12px" id="obs-grill">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+      <h2 class="ob-serif ob-h">What grill asks</h2>
+      <span class="ob-tag">Judged by Claude</span>
+    </div>
+    <p class="ob-note"><span data-source="grill_summary" data-field="questions" data-row="0">—</span> questions across <span data-source="grill_summary" data-field="runs" data-row="0">—</span> grill run(s), <span data-source="grill_summary" data-field="accepted" data-row="0">—</span> answered by accepting the recommendation. The three kinds of question asked most, with the judge's view.</p>
+    <ul class="ob-themes" id="obs-theme-list" data-source="grill_topics"></ul>
+  </section>
+
+  <section class="ob-row">
+    <div class="ob-card ob-wide" id="obs-traces">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+        <h2 class="ob-serif ob-h">Task traces</h2>
+        <div class="ob-legend"><span><span class="ob-sw" style="background:var(--ob-blue)"></span>brief → grill</span><span><span class="ob-sw" style="background:var(--ob-pink)"></span>grill → record</span></div>
+      </div>
+      <p class="ob-note">Newest first. Bar length is minutes from brief to record, split at the grill.</p>
+      <div style="overflow-x:auto">
+        <table class="ob-tbl" id="obs-trace-table" data-source="traces" data-row-key="task" style="min-width:560px">
+          <thead><tr><th data-field="task">Task</th><th data-field="version">Ver</th><th data-field="total_min" style="width:40%">Spans (min)</th><th data-field="rating">Rating</th><th data-field="status">Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="ob-row" id="obs-analysis">
+    <div class="ob-card ob-side" style="background:var(--ob-cream)" id="obs-topics">
+      <h2 class="ob-serif ob-h">Topics</h2>
+      <p class="ob-note">What real sessions dealt with, and how the plugin handled each kind. Latest batch, judged by Claude.</p>
+      <ul class="ob-themes" id="obs-topic-list" data-source="session_analysis"></ul>
+    </div>
+    <div class="ob-card ob-side" style="background:var(--ob-sky)" id="obs-confusion">
+      <h2 class="ob-serif ob-h">Confusion</h2>
+      <p class="ob-note">Where the plugin and the person did not understand each other. Latest batch, judged by Claude.</p>
+      <ul class="ob-themes" id="obs-confusion-list" data-source="session_analysis"></ul>
+    </div>
+  </section>
+
+  <section class="ob-row" style="flex-direction:column;gap:10px" id="obs-gaps">
+    <div class="ob-tags"><span class="ob-tag">Not logged yet</span></div>
+    <div class="ob-gaps">
+      <div class="ob-card ob-gap"><div class="ob-label">Eval and agent cost</div><div class="ob-serif">Needs token and cost logging</div><div class="ob-sub">per run and per week</div></div>
+    </div>
+  </section>
+</div>
+</template>
+
+<template id="tpl-eval">
+<div class="ob">
+  <header class="ob-head">
+    <div class="ob-brand">TechSeed<small>daily-work · offline eval</small></div>
+    <div class="ob-tags"><span class="ob-tag"><span class="ob-dot"></span>Simulated data</span><span class="ob-tag">Run <span data-source="eval_overview" data-field="run_id">—</span></span></div>
+  </header>
+  <p class="ob-note">Ten invented scenarios, a simulated user, scored by file checks and an LLM judge (1 to 5). Nothing here comes from real sessions. Source: the tables eval_runs and eval_steps.</p>
+
+  <section class="ob-kpis" id="eval-kpis">
+    <div class="ob-card ob-kpi"><div class="ob-label">End to end</div><div class="ob-big dash-skeleton" data-kpi="end_to_end/request_to_done">—</div><div class="ob-sub">would the person accept it, out of 5</div></div>
+    <div class="ob-card ob-kpi"><div class="ob-label">Work meets expected</div><div class="ob-big dash-skeleton" data-kpi="work/meets_expected">—</div><div class="ob-sub">out of 5</div></div>
+    <div class="ob-card ob-kpi"><div class="ob-label">Essential facts found</div><div class="ob-big dash-skeleton" data-kpi="grill/essential_share">—</div><div class="ob-sub">by the grill, in the task file</div></div>
+    <div class="ob-card ob-kpi"><div class="ob-label">Questions docs answered</div><div class="ob-big dash-skeleton" data-kpi="grill/questions_docs_answer">—</div><div class="ob-sub">per grill, lower is better</div></div>
+    <div class="ob-card ob-kpi"><div class="ob-label">Caveats honest</div><div class="ob-big dash-skeleton" data-kpi="record/caveats_honest">—</div><div class="ob-sub">out of 5, by record</div></div>
+  </section>
+
+  <section class="ob-card ob-wide" id="eval-runs">
+    <h2 class="ob-serif ob-h">Scores per run</h2>
+    <p class="ob-note">Overall mean over the scenarios, per complete run, oldest left. Red: worse than the run before by more than 0.5 points, 0.15 of a share, or a quarter of a count.</p>
+    <div style="overflow-x:auto"><table class="ob-tbl" id="eval-runs-table"><thead></thead><tbody></tbody></table></div>
+    <p class="ob-note" id="eval-size"></p>
+  </section>
+
+  <section class="ob-card" style="background:var(--ob-sky);display:flex;flex-direction:column;gap:12px" id="eval-scenarios">
+    <h2 class="ob-serif ob-h">Scenarios, latest run</h2>
+    <p class="ob-note">Mean over the runs of each scenario, weakest first.</p>
+    <div style="overflow-x:auto"><table class="ob-tbl" id="eval-scenario-table" style="min-width:640px">
+      <thead><tr><th>Scenario</th><th>End to end</th><th>Work meets expected</th><th>Essential facts</th><th>Questions docs answered</th><th>Caveats honest</th><th>Minutes</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <section class="ob-row" id="eval-analysis">
+    <div class="ob-card ob-side" style="background:var(--ob-cream)" id="eval-topics">
+      <h2 class="ob-serif ob-h">Topics</h2>
+      <p class="ob-note">What the conversations dealt with, and how the plugin handled each kind. Latest run, judged by Claude.</p>
+      <ul class="ob-themes" id="eval-topic-list" data-source="eval_analysis"></ul>
+    </div>
+    <div class="ob-card ob-side" style="background:var(--ob-sky)" id="eval-confusion">
+      <h2 class="ob-serif ob-h">Confusion</h2>
+      <p class="ob-note">Where the plugin, the user or two steps did not understand each other. Latest run, judged by Claude.</p>
+      <ul class="ob-themes" id="eval-confusion-list" data-source="eval_analysis"></ul>
+    </div>
+  </section>
+
+  <section class="ob-card" style="background:var(--ob-cream);display:flex;flex-direction:column;gap:12px" id="eval-steps">
+    <h2 class="ob-serif ob-h">What went in, what came out</h2>
+    <p class="ob-note">Every step of the latest run. Pick a row to see its input, its output and the judge's reasons. Input and output are cut at 3 000 characters.</p>
+    <div class="ev-pick"><label>Scenario <select id="eval-pick-scenario"></select></label><label>Step <select id="eval-pick-step"></select></label></div>
+    <div style="overflow-x:auto;max-height:22rem"><table class="ob-tbl" id="eval-step-table" style="min-width:560px">
+      <thead><tr><th>Scenario</th><th>Run</th><th>Step</th><th>Done</th><th>Judge scores</th><th>Messages</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div id="eval-step-detail"></div>
+  </section>
+</div>
+</template>
+
+<script>
+// Eval sources: the Supabase answer unwrapped, numbers read as numbers.
+const evalRows = (answer) => {
+  let a = answer;
+  if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+  if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+  if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+  const text = typeof a === 'string' ? a : (a && a.result);
+  if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+  const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+  if (!m) throw new Error(text.slice(0, 300));
+  return JSON.parse(m[2]);
+};
+const evalNumbers = (rows, keys) => rows.map((r) => { const o = { ...r }; keys.forEach((k) => { o[k] = r[k] == null ? null : Number(r[k]); }); return o; });
+const evalTable = (rows) => ({ columns: rows.length ? Object.keys(rows[0]) : [], rows });
+dash.loader('eval_overview', { description: 'Unwraps the rows from Supabase’s answer and reads numbers as numbers', fn: ({ answer }) => evalTable(evalNumbers(evalRows(answer), ['mean', 'low', 'high'])) });
+dash.loader('eval_scenarios', { description: 'Unwraps the rows from Supabase’s answer and reads numbers as numbers', fn: ({ answer }) => evalTable(evalNumbers(evalRows(answer), ['request_to_done', 'meets_expected', 'essential_share', 'questions_docs_answer', 'caveats_honest', 'minutes'])) });
+dash.loader('eval_tokens', { description: 'Unwraps the rows from Supabase’s answer and reads numbers as numbers', fn: ({ answer }) => evalTable(evalNumbers(evalRows(answer), ['tokens', 'minutes_per_run', 'scenarios', 'runs_per_scenario'])) });
+dash.loader('judge', { description: 'Unwraps the rows from Supabase’s answer and reads numbers as numbers', fn: ({ answer }) => evalTable(evalNumbers(evalRows(answer), ['overall'])) });
+const analysisRows = (answer) => evalTable(evalRows(answer).map((r) => ({ ...r, run_count: Number(r.run_count), runs_total: Number(r.runs_total),
+  bullets: typeof r.bullets === 'string' ? JSON.parse(r.bullets) : (r.bullets || []), runs: typeof r.runs === 'string' ? JSON.parse(r.runs) : (r.runs || []) })));
+dash.loader('session_analysis', { description: 'Unwraps the rows from Supabase’s answer and reads the JSON columns', fn: ({ answer }) => analysisRows(answer) });
+dash.loader('eval_steps', { description: 'Unwraps the rows from Supabase’s answer and reads the JSON columns', fn: ({ answer }) => evalTable(evalRows(answer).map((r) => ({ ...r,
+  run: Number(r.run), messages: Number(r.messages),
+  metrics: typeof r.metrics === 'string' ? JSON.parse(r.metrics) : (r.metrics || {}),
+  reasons: typeof r.reasons === 'string' ? JSON.parse(r.reasons) : (r.reasons || {}) }))) });
+</script>
+
+<script>
+dash.loader('kpis', {
+  description: 'Unwraps the rows from Supabase’s answer and reads the rate and rating as numbers',
+  fn: ({ answer }) => {
+    let a = answer;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+    if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+    if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+    const text = typeof a === 'string' ? a : (a && a.result);
+    if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+    const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+    if (!m) throw new Error(text.slice(0, 300));
+    const rows = JSON.parse(m[2]).map((r) => ({ ...r,
+      record_rate: r.record_rate == null ? null : Number(r.record_rate),
+      avg_rating: r.avg_rating == null ? null : Number(r.avg_rating) }));
+    return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
+  },
+});
+dash.loader('funnel', {
+  description: 'Unwraps the rows from Supabase’s answer',
+  fn: ({ answer }) => {
+    let a = answer;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+    if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+    if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+    const text = typeof a === 'string' ? a : (a && a.result);
+    if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+    const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+    if (!m) throw new Error(text.slice(0, 300));
+    const rows = JSON.parse(m[2]).map((r) => ({ ...r, tasks: Number(r.tasks) }));
+    return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
+  },
+});
+dash.loader('daily', {
+  description: 'Unwraps the rows from Supabase’s answer',
+  fn: ({ answer }) => {
+    let a = answer;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+    if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+    if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+    const text = typeof a === 'string' ? a : (a && a.result);
+    if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+    const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+    if (!m) throw new Error(text.slice(0, 300));
+    const rows = JSON.parse(m[2]).map((r) => ({ ...r, brief: Number(r.brief), grill: Number(r.grill), record: Number(r.record) }));
+    return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
+  },
+});
+dash.loader('tasks', {
+  description: 'Unwraps the rows from Supabase’s answer',
+  fn: ({ answer }) => {
+    let a = answer;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+    if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+    if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+    const text = typeof a === 'string' ? a : (a && a.result);
+    if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+    const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+    if (!m) throw new Error(text.slice(0, 300));
+    const rows = JSON.parse(m[2]).map((r) => ({ ...r,
+      minutes: r.minutes == null ? null : Number(r.minutes),
+      rating: r.rating == null ? null : Number(r.rating) }));
+    return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
+  },
+});
+dash.loader('versions', {
+  description: 'Unwraps the rows from Supabase’s answer and reads numbers as numbers',
+  fn: ({ answer }) => {
+    let a = answer;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+    if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+    if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+    const text = typeof a === 'string' ? a : (a && a.result);
+    if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+    const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+    if (!m) throw new Error(text.slice(0, 300));
+    const rows = JSON.parse(m[2]).map((r) => ({ ...r, installs: r.installs == null ? null : Number(r.installs), started: r.started == null ? null : Number(r.started), recorded: r.recorded == null ? null : Number(r.recorded), completion: r.completion == null ? null : Number(r.completion), grill_aborted: r.grill_aborted == null ? null : Number(r.grill_aborted), cycle_p50_min: r.cycle_p50_min == null ? null : Number(r.cycle_p50_min), rating: r.rating == null ? null : Number(r.rating) }));
+    return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
+  },
+});
+dash.loader('cycle', {
+  description: 'Unwraps the rows from Supabase’s answer and reads numbers as numbers',
+  fn: ({ answer }) => {
+    let a = answer;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+    if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+    if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+    const text = typeof a === 'string' ? a : (a && a.result);
+    if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+    const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+    if (!m) throw new Error(text.slice(0, 300));
+    const rows = JSON.parse(m[2]).map((r) => ({ ...r, started: r.started == null ? null : Number(r.started), closed: r.closed == null ? null : Number(r.closed), p50_min: r.p50_min == null ? null : Number(r.p50_min), p75_min: r.p75_min == null ? null : Number(r.p75_min) }));
+    return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
+  },
+});
+dash.loader('hourly', {
+  description: 'Unwraps the rows from Supabase’s answer and reads numbers as numbers',
+  fn: ({ answer }) => {
+    let a = answer;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+    if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+    if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+    const text = typeof a === 'string' ? a : (a && a.result);
+    if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+    const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+    if (!m) throw new Error(text.slice(0, 300));
+    const rows = JSON.parse(m[2]).map((r) => ({ ...r, started: r.started == null ? null : Number(r.started), recorded: r.recorded == null ? null : Number(r.recorded), completion: r.completion == null ? null : Number(r.completion) }));
+    return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
+  },
+});
+dash.loader('traces', {
+  description: 'Unwraps the rows from Supabase’s answer and reads numbers as numbers',
+  fn: ({ answer }) => {
+    let a = answer;
+    if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+    if (Array.isArray(a)) a = a.map((p) => (p && p.text) || '').join('\n');
+    if (a && typeof a === 'object' && a.error) throw new Error(typeof a.error === 'string' ? a.error : (a.error.message || JSON.stringify(a.error)));
+    const text = typeof a === 'string' ? a : (a && a.result);
+    if (typeof text !== 'string') throw new Error('Supabase answered without a result');
+    const m = text.match(/<untrusted-data-([0-9a-f-]+)>\r?\n([\s\S]*?)\r?\n<\/untrusted-data-\1>/);
+    if (!m) throw new Error(text.slice(0, 300));
+    const rows = JSON.parse(m[2]).map((r) => ({ ...r, brief_to_grill_min: r.brief_to_grill_min == null ? null : Number(r.brief_to_grill_min), grill_to_record_min: r.grill_to_record_min == null ? null : Number(r.grill_to_record_min), total_min: r.total_min == null ? null : Number(r.total_min), rating: r.rating == null ? null : Number(r.rating) }));
+    return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
+  },
+});
+
+dash.calc('grill_topics', {
+  inputs: ['grill_questions', 'grill_themes'],
+  title: 'Grill questions per kind',
+  description: 'Questions asked per kind across captured grill runs, how many took the recommendation, and the judge’s note on each kind.',
+  fn: (grill_questions, grill_themes) => {
+    const by = new Map();
+    grill_questions.forEach((q) => {
+      const t = by.get(q.topic) || { topic: q.topic, questions: 0, accepted: 0 };
+      t.questions += 1;
+      if (q.answer === 'Accepted recommendation') t.accepted += 1;
+      by.set(q.topic, t);
+    });
+    const notes = new Map(grill_themes.map((t) => [t.theme, t.note]));
+    return [...by.values()].map((t) => ({ ...t, note: notes.get(t.topic) || null })).sort((a, b) => b.questions - a.questions);
+  },
+});
+dash.calc('grill_summary', {
+  inputs: ['grill_questions', 'grill_topics'],
+  title: 'Grill headline',
+  description: 'Total questions, how many took the recommendation, runs captured, and the most-asked topic.',
+  fn: (grill_questions, grill_topics) => [{
+    questions: grill_questions.length,
+    accepted: grill_questions.filter((q) => q.answer === 'Accepted recommendation').length,
+    runs: new Set(grill_questions.map((q) => q.run)).size,
+    top_topic: grill_topics.length ? grill_topics[0].topic : null,
+    top_questions: grill_topics.length ? grill_topics[0].questions : null,
+  }],
+});
+</script>
+
+<script>
+(() => {
+  const page = document.getElementById('dash-root');
+  const root = page.querySelector('#usage');
+  const fmtCount = d3.format(',');
+  const fmtPct = d3.format('.0%');
+  const fmtWhen = (s) => { const d = new Date(s); return isNaN(d) ? '' : d.toLocaleString('en-GB', { timeZone: 'Europe/Stockholm', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+  const fmtDay = (s) => d3.utcFormat('%b %-d')(new Date(s + 'T00:00:00Z'));
+  const stepName = { brief: 'Brief', grill: 'Grill', record: 'Record' };
+
+  const failLine = (el) => { el.replaceChildren(); const d = document.createElement('div'); d.className = 'dw-fail'; d.textContent = 'Failed to load'; el.appendChild(d); };
+  const isFail = (s) => s === 'error' || s === 'connect' || s === 'declined';
+
+  const tipFor = (box) => { let t = box.querySelector('.dw-tip'); if (!t) { t = document.createElement('div'); t.className = 'dw-tip'; box.appendChild(t); } return t; };
+  const showTip = (box, tip, ev, lines) => {
+    tip.replaceChildren();
+    lines.forEach(([k, v], i) => { const row = document.createElement('div'); if (i === 0) { row.className = 'k'; row.textContent = k; } else { row.textContent = k + ': ' + v; } tip.appendChild(row); });
+    tip.style.display = 'block';
+    const r = box.getBoundingClientRect();
+    let x = ev.clientX - r.left + 12, y = ev.clientY - r.top + 12;
+    x = Math.min(x, r.width - tip.offsetWidth - 4); y = Math.min(y, r.height - tip.offsetHeight - 4);
+    tip.style.left = Math.max(0, x) + 'px'; tip.style.top = Math.max(0, y) + 'px';
+  };
+
+  function drawKpis() {
+    const k = dash.data('kpis');
+    const els = root.querySelectorAll('[data-source="kpis"]');
+    if (k.status !== 'ok') {
+      els.forEach((el) => { el.textContent = '—'; if (!isFail(k.status)) el.classList.add('dash-skeleton'); else el.classList.remove('dash-skeleton'); });
+      return;
+    }
+    const r = k.data[0] || {};
+    els.forEach((el) => {
+      el.classList.remove('dash-skeleton');
+      const f = el.dataset.field, v = r[f];
+      if (v == null) { el.textContent = '—'; return; }
+      if (f === 'record_rate') el.textContent = fmtPct(v);
+      else if (f === 'avg_rating') el.textContent = d3.format('.1f')(v);
+      else if (f === 'last_event') el.textContent = fmtWhen(v);
+      else if (typeof v === 'number') el.textContent = fmtCount(v);
+      else el.textContent = v;
+    });
+  }
+
+  function drawFunnel() {
+    const box = root.querySelector('#chart-funnel');
+    const d = dash.data('funnel');
+    if (isFail(d.status)) { failLine(box); return; }
+    if (d.status !== 'ok') { box.replaceChildren(); return; }
+    const rows = d.data;
+    box.replaceChildren();
+    const W = Math.max(240, box.clientWidth), barH = 28, gap = 18, H = rows.length * (barH + gap) + 4;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    const probe = svg.append('text').attr('font-size', 12).style('font-family', 'var(--font-anthropic-sans)');
+    const labelW = d3.max(rows, (r) => { probe.text(stepName[r.step] || r.step); return probe.node().getComputedTextLength(); }) || 40;
+    const numW = d3.max(rows, (r) => { probe.text(fmtCount(r.tasks)); return probe.node().getComputedTextLength(); }) || 20;
+    probe.remove();
+    const left = labelW + 12, right = numW + 10;
+    const x = d3.scaleLinear([0, d3.max(rows, (r) => r.tasks) || 1], [0, Math.max(10, W - left - right)]);
+    const tip = tipFor(box);
+    const g = svg.selectAll('g.row').data(rows).join('g').attr('transform', (r, i) => `translate(0,${i * (barH + gap)})`);
+    g.append('text').attr('x', 0).attr('y', barH / 2).attr('dy', '0.35em').attr('font-size', 12).attr('fill', '#111111').style('font-family', 'var(--font-anthropic-sans)').text((r) => stepName[r.step] || r.step);
+    g.append('rect').attr('x', left).attr('y', 0).attr('height', barH).attr('rx', 4).attr('stroke', '#111111').attr('stroke-width', 1.5)
+      .attr('width', (r) => Math.max(2, x(r.tasks))).attr('fill', (r) => ({ brief: '#376B94', grill: '#E987BE', record: '#FFFF73' })[r.step] || '#E987BE')
+      .on('mousemove', (ev, r) => showTip(box, tip, ev, [[stepName[r.step] || r.step], ['Tasks', fmtCount(r.tasks)]]))
+      .on('mouseleave', () => { tip.style.display = 'none'; });
+    g.append('text').attr('x', (r) => left + Math.max(2, x(r.tasks)) + 6).attr('y', barH / 2).attr('dy', '0.35em').attr('font-size', 12).attr('fill', '#3B3B3B').style('font-variant-numeric', 'tabular-nums').text((r) => fmtCount(r.tasks));
+  }
+
+  function drawDaily() {
+    const box = root.querySelector('#chart-daily');
+    const legend = root.querySelector('#legend-daily');
+    const d = dash.data('daily');
+    const series = ['brief', 'grill', 'record'];
+    const usageColors = ['#376B94', '#E987BE', '#FFFF73'];
+    legend.replaceChildren(...series.map((s, i) => { const span = document.createElement('span'); const sw = document.createElement('i'); sw.style.background = usageColors[i]; span.append(sw, stepName[s]); return span; }));
+    if (isFail(d.status)) { failLine(box); return; }
+    if (d.status !== 'ok') { box.replaceChildren(); return; }
+    const rows = d.data;
+    box.replaceChildren();
+    const W = Math.max(240, box.clientWidth), H = 200, top = 8, bottom = 24;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    const maxV = d3.max(rows, (r) => d3.max(series, (s) => r[s])) || 1;
+    const y = d3.scaleLinear([0, maxV], [H - bottom, top]).nice();
+    const ticks = y.ticks(Math.min(4, maxV)).filter(Number.isInteger);
+    const probe = svg.append('text').attr('font-size', 12);
+    const left = (d3.max(ticks, (t) => { probe.text(fmtCount(t)); return probe.node().getComputedTextLength(); }) || 10) + 8;
+    probe.remove();
+    const x = d3.scaleBand(rows.map((r) => r.day), [left, W - 4]).paddingInner(0.3).paddingOuter(0.2);
+    const inner = d3.scaleBand(series, [0, Math.min(x.bandwidth(), 3 * 32 + 8)]).padding(0.15);
+    const offset = (x.bandwidth() - inner.range()[1]) / 2;
+    svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', left).attr('x2', W - 4).attr('y1', (t) => y(t)).attr('y2', (t) => y(t)).attr('stroke', 'rgba(17,17,17,0.12)');
+    svg.append('g').selectAll('text').data(ticks).join('text').attr('x', left - 6).attr('y', (t) => y(t)).attr('dy', '0.35em').attr('text-anchor', 'end').attr('font-size', 12).attr('fill', '#3B3B3B').text((t) => fmtCount(t));
+    const step = Math.max(1, Math.ceil(rows.length / Math.max(1, Math.floor((W - left) / 60))));
+    svg.append('g').selectAll('text').data(rows.filter((r, i) => i % step === 0)).join('text').attr('x', (r) => x(r.day) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').attr('font-size', 12).attr('fill', '#3B3B3B').text((r) => fmtDay(r.day));
+    const tip = tipFor(box);
+    const flat = rows.flatMap((r) => series.map((s, i) => ({ day: r.day, s, i, v: r[s], row: r })));
+    svg.append('g').selectAll('rect').data(flat).join('rect')
+      .attr('x', (p) => x(p.day) + offset + inner(p.s)).attr('width', inner.bandwidth())
+      .attr('y', (p) => y(p.v)).attr('height', (p) => Math.max(0, y(0) - y(p.v))).attr('rx', 4).attr('fill', (p) => usageColors[p.i]).attr('stroke', '#111111').attr('stroke-width', 1.5)
+      .on('mousemove', (ev, p) => showTip(box, tip, ev, [[fmtDay(p.day)], ...series.map((s) => [stepName[s], fmtCount(p.row[s])])]))
+      .on('mouseleave', () => { tip.style.display = 'none'; });
+  }
+
+  function drawTasks() {
+    const table = root.querySelector('#table-tasks');
+    const tbody = table.querySelector('tbody');
+    const d = dash.data('tasks');
+    tbody.replaceChildren();
+    if (d.status !== 'ok') {
+      const tr = document.createElement('tr'); const td = document.createElement('td'); td.colSpan = 7; td.style.minHeight = '3rem';
+      if (isFail(d.status)) failLine(td); else { td.className = 'dash-skeleton'; td.textContent = '—'; }
+      tr.appendChild(td); tbody.appendChild(tr); return;
+    }
+    d.data.forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = r.task;
+      const cell = (text, cls) => { const td = document.createElement('td'); td.textContent = text; if (cls) td.className = cls; tr.appendChild(td); };
+      cell(r.task);
+      cell(fmtWhen(r.started));
+      cell(r.version, 'dw-hide-narrow');
+      cell(r.grilled ? 'Yes' : 'No', r.grilled ? 'yes' : 'no');
+      cell(r.recorded ? 'Yes' : 'No', r.recorded ? 'yes' : 'no');
+      cell(r.minutes == null ? '' : fmtCount(r.minutes), 'num');
+      cell(r.rating == null ? '' : String(r.rating), 'num');
+      tbody.appendChild(tr);
+    });
+  }
+
+
+  // ---------- Observability tab ----------
+  const fmtMin = (v) => v == null ? '' : d3.format('.1f')(v);
+  const obsRoot = () => page.querySelector('#observability .ob');
+
+  function setText(el, v) { el.classList.remove('dash-skeleton'); el.textContent = v; }
+
+  function drawObsHero(ob) {
+    const d = dash.data('grill_summary');
+    ob.querySelectorAll('#obs-grill [data-source="grill_summary"]').forEach((el) => {
+      const v = d.status === 'ok' && d.data[0] ? d.data[0][el.dataset.field] : null;
+      el.textContent = v == null ? '—' : fmtCount(v);
+    });
+  }
+
+  function fillMarks(ob, id, fmt) {
+    const d = dash.data(id);
+    ob.querySelectorAll(`[data-source="${id}"][data-row="0"]`).forEach((el) => {
+      const holder = el.closest('.ob-big') || el;
+      if (d.status !== 'ok') { el.textContent = '—'; return; }
+      holder.classList.remove('dash-skeleton');
+      const v = (d.data[0] || {})[el.dataset.field];
+      el.textContent = v == null ? '—' : fmt(el.dataset.field, v);
+    });
+  }
+
+  function drawObsKpis(ob) {
+    fillMarks(ob, 'kpis', (f, v) => f === 'record_rate' ? fmtPct(v) : f === 'avg_rating' ? d3.format('.1f')(v) : fmtCount(v));
+    fillMarks(ob, 'cycle', (f, v) => f.endsWith('_min') ? fmtMin(v) : fmtCount(v));
+  }
+
+  function drawObsChart(ob) {
+    const box = ob.querySelector('#obs-chart');
+    const h = dash.data('hourly'), vd = dash.data('versions'), k = dash.data('kpis');
+    if (isFail(h.status)) { failLine(box); return; }
+    if (h.status !== 'ok') { box.replaceChildren(); return; }
+    box.replaceChildren();
+    const rows = h.data.map((r) => ({ ...r, t: new Date(r.hour) })).filter((r) => !isNaN(r.t));
+    if (!rows.length) { const p = document.createElement('p'); p.className = 'ob-note'; p.textContent = 'No tasks started in the last 7 days.'; box.appendChild(p); return; }
+    const W = Math.max(260, box.clientWidth), H = 240, top = 26, bottom = 26, right = 10;
+    const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H);
+    const y = d3.scaleLinear([0, 1], [H - bottom, top]);
+    const probe = svg.append('text').attr('font-size', 12).text('100%');
+    const left = probe.node().getComputedTextLength() + 10; probe.remove();
+    const t0 = d3.min(rows, (r) => r.t), t1 = d3.utcHour.offset(d3.max(rows, (r) => r.t), 1);
+    const x = d3.scaleUtc([t0, t1], [left, W - right]);
+    const xc = (r) => x(new Date(+r.t + 30 * 60 * 1000));
+    [0, 0.5, 1].forEach((t) => {
+      svg.append('line').attr('x1', left).attr('x2', W - right).attr('y1', y(t)).attr('y2', y(t)).attr('stroke', 'rgba(17,17,17,0.12)');
+      svg.append('text').attr('x', left - 6).attr('y', y(t)).attr('dy', '0.35em').attr('text-anchor', 'end').attr('font-size', 12).attr('fill', '#3B3B3B').text(fmtPct(t));
+    });
+    if (k.status === 'ok' && k.data[0] && k.data[0].record_rate != null) {
+      svg.append('line').attr('x1', left).attr('x2', W - right).attr('y1', y(k.data[0].record_rate)).attr('y2', y(k.data[0].record_rate)).attr('stroke', '#111111').attr('stroke-width', 1.5).attr('stroke-dasharray', '6 6');
+    }
+    if (vd.status === 'ok') {
+      const marks = vd.data.map((v) => ({ v: v.version, t: new Date(v.first_seen) })).filter((m) => m.t >= t0 && m.t <= t1);
+      let lastX = -Infinity;
+      marks.forEach((m) => {
+        const mx = x(m.t);
+        svg.append('line').attr('x1', mx).attr('x2', mx).attr('y1', top - 4).attr('y2', H - bottom).attr('stroke', '#6E8B2A').attr('stroke-width', 2.5);
+        const lab = svg.append('text').attr('y', 12).attr('font-size', 11).attr('fill', '#111111').attr('font-weight', 600).text('v' + m.v);
+        const lw = lab.node().getComputedTextLength();
+        let lx = Math.min(Math.max(mx - lw / 2, left), W - right - lw);
+        if (lx < lastX + 6) lx = lastX + 6;
+        lab.attr('x', lx); lastX = lx + lw;
+      });
+    }
+    const ticks = x.ticks(Math.max(2, Math.min(6, Math.floor((W - left) / 90))));
+    ticks.forEach((tk) => svg.append('text').attr('x', x(tk)).attr('y', H - 6).attr('text-anchor', 'middle').attr('font-size', 12).attr('fill', '#3B3B3B')
+      .text(tk.toLocaleString('en-GB', { timeZone: 'Europe/Stockholm', hour: '2-digit', minute: '2-digit', ...(rows.length > 24 ? { day: 'numeric', month: 'short' } : {}) })));
+    const line = d3.line().x(xc).y((r) => y(r.completion));
+    svg.append('path').datum(rows).attr('d', line).attr('fill', 'none').attr('stroke', '#A04F7B').attr('stroke-width', 4).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
+    const tip = tipFor(box);
+    svg.selectAll('circle.p').data(rows).join('circle').attr('cx', xc).attr('cy', (r) => y(r.completion)).attr('r', 5).attr('fill', '#A04F7B').attr('stroke', '#FBF9F4').attr('stroke-width', 2)
+      .on('mousemove', (ev, r) => showTip(box, tip, ev, [[r.t.toLocaleString('en-GB', { timeZone: 'Europe/Stockholm', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })], ['Completion', fmtPct(r.completion)], ['Started', fmtCount(r.started)], ['Recorded', fmtCount(r.recorded)]]))
+      .on('mouseleave', () => { tip.style.display = 'none'; });
+  }
+
+  function drawObsTopics(ob) {
+    const list = ob.querySelector('#obs-theme-list');
+    const d = dash.data('grill_topics');
+    list.replaceChildren();
+    if (isFail(d.status)) { failLine(list); return; }
+    if (d.status !== 'ok') return;
+    d.data.slice(0, 3).forEach((r) => {
+      const li = document.createElement('li');
+      const head = document.createElement('div');
+      const t = document.createElement('span'); t.className = 't'; t.textContent = r.topic;
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = fmtCount(r.questions) + ' questions · ' + fmtCount(r.accepted) + ' accepted as recommended';
+      head.append(t, n);
+      const note = document.createElement('div'); note.textContent = r.note || '';
+      li.append(head, note); list.appendChild(li);
+    });
+  }
+
+  function drawObsJudge(ob) {
+    const tbody = ob.querySelector('#obs-judge-table tbody');
+    const d = dash.data('judge');
+    tbody.replaceChildren();
+    if (d.status !== 'ok') { const tr = tbody.insertRow(); const td = tr.insertCell(); td.colSpan = 6; if (isFail(d.status)) failLine(td); else { td.className = 'dash-skeleton'; td.textContent = '—'; } return; }
+    d.data.forEach((r) => {
+      const tr = tbody.insertRow(); tr.dataset.key = r.run;
+      const c = (text, cls) => { const td = tr.insertCell(); if (cls) td.className = cls; td.textContent = text; return td; };
+      c(r.task, 'mono'); c(r.skill);
+      const o = c(r.overall == null ? '·' : d3.format('.1f')(r.overall), 'mono'); if (r.overall != null && r.overall < 3.5) o.classList.add('worse');
+      c(r.scores, 'mono'); c(r.verdict); c(r.reasoning, 'reason');
+    });
+  }
+
+  function drawObsTraces(ob) {
+    const table = ob.querySelector('#obs-trace-table'), tbody = table.querySelector('tbody');
+    const d = dash.data('traces');
+    tbody.replaceChildren();
+    if (d.status !== 'ok') { const tr = tbody.insertRow(); const td = tr.insertCell(); td.colSpan = 5; if (isFail(d.status)) failLine(td); else { td.className = 'dash-skeleton'; td.textContent = '—'; } return; }
+    const maxT = d3.max(d.data, (r) => r.total_min) || 1;
+    d.data.forEach((r) => {
+      const tr = tbody.insertRow(); tr.dataset.key = r.task;
+      const c = (text, cls) => { const td = tr.insertCell(); if (cls) td.className = cls; td.textContent = text; return td; };
+      c(r.task, 'mono'); c(r.version, 'mono');
+      const td = tr.insertCell();
+      const wrap = document.createElement('div'); wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '8px';
+      const bar = document.createElement('div'); bar.className = 'ob-spans'; bar.style.flex = '1';
+      const span = (min, color) => { if (min == null || min <= 0) return; const s = document.createElement('div'); s.style.width = (100 * min / maxT) + '%'; s.style.background = color; bar.appendChild(s); };
+      span(r.brief_to_grill_min, '#376B94'); span(r.grill_to_record_min, '#E987BE');
+      if (!bar.children.length) { const s = document.createElement('div'); s.style.width = '3%'; s.style.background = '#376B94'; bar.appendChild(s); }
+      const lab = document.createElement('span'); lab.className = 'mono'; lab.textContent = fmtMin(r.total_min);
+      wrap.append(bar, lab); td.appendChild(wrap);
+      c(r.rating == null ? '·' : String(r.rating), 'mono');
+      const st = tr.insertCell(); const tag = document.createElement('span'); tag.className = 'ob-tag'; tag.style.borderColor = r.status === 'Done' ? '#6E8B2A' : r.status === 'Aborted' ? '#D23A1F' : '#E987BE'; tag.textContent = r.status; st.appendChild(tag);
+    });
+  }
+
+  function drawObs() {
+    const ob = obsRoot(); if (!ob) return;
+    drawObsHero(ob); drawObsKpis(ob); drawObsChart(ob); drawObsTopics(ob); drawObsJudge(ob); drawObsTraces(ob);
+    drawAnalysis(ob, 'session_analysis', [['topics', '#obs-topic-list'], ['confusion', '#obs-confusion-list']]);
+  }
+
+  // ---------- Eval tab ----------
+  const evalCriteria = { brief: ['goal_captured', 'scope_right', 'nothing_invented'], grill: ['task_quality'], work: ['meets_task', 'meets_expected'], record: ['result_true', 'caveats_honest'], end_to_end: ['request_to_done'] };
+  const evalSteps = ['brief', 'grill', 'work', 'record', 'end_to_end'];
+  const evalLower = new Set(['questions', 'questions_docs_answer']);
+  const evalShares = new Set(['completed', 'layout_share', 'essential_share', 'facts_share', 'stated_share', 'checks_share']);
+  const evalFmt = (metric, v) => v == null ? '·' : evalShares.has(metric) ? fmtPct(v) : d3.format('.2~f')(v);
+  const evalWorse = (metric, before, now) => {
+    if (before == null || now == null) return false;
+    const drop = evalLower.has(metric) ? now - before : before - now;
+    if (evalShares.has(metric)) return drop > 0.15;
+    if (evalLower.has(metric)) return before ? drop > 0.25 * before : drop >= 1;
+    return drop > 0.5;
+  };
+  const evalRoot = () => page.querySelector('#eval .ob');
+  const evalPick = { scenario: '', step: '', key: null };
+
+  function drawEvalHead(ob) {
+    const d = dash.data('eval_overview');
+    const runs = d.status === 'ok' ? [...new Set(d.data.map((r) => r.run_id))] : [];
+    const last = runs[runs.length - 1];
+    ob.querySelectorAll('[data-source="eval_overview"][data-field="run_id"]').forEach((el) => { el.textContent = last || '—'; });
+    ob.querySelectorAll('[data-kpi]').forEach((el) => {
+      if (d.status !== 'ok') { el.textContent = '—'; if (isFail(d.status)) el.classList.remove('dash-skeleton'); return; }
+      el.classList.remove('dash-skeleton');
+      const [step, metric] = el.dataset.kpi.split('/');
+      const r = d.data.find((x) => x.run_id === last && x.step === step && x.metric === metric);
+      el.textContent = r ? evalFmt(metric, r.mean) : '—';
+    });
+  }
+
+  function drawEvalRuns(ob) {
+    const table = ob.querySelector('#eval-runs-table'), thead = table.querySelector('thead'), tbody = table.querySelector('tbody');
+    const d = dash.data('eval_overview');
+    thead.replaceChildren(); tbody.replaceChildren();
+    if (d.status !== 'ok') { const tr = tbody.insertRow(); const td = tr.insertCell(); td.colSpan = 4; if (isFail(d.status)) failLine(td); else { td.className = 'dash-skeleton'; td.textContent = '—'; } return; }
+    const runs = [...new Set(d.data.map((r) => r.run_id))];
+    const head = thead.insertRow();
+    ['Step', 'Metric', ...runs].forEach((h) => { const th = document.createElement('th'); th.textContent = h; head.appendChild(th); });
+    const by = new Map(d.data.map((r) => [r.run_id + '|' + r.step + '|' + r.metric, r]));
+    const keys = [...new Set(d.data.map((r) => r.step + '|' + r.metric))].sort((a, b) => {
+      const [sa, ma] = a.split('|'), [sb, mb] = b.split('|');
+      return evalSteps.indexOf(sa) - evalSteps.indexOf(sb) || ma.localeCompare(mb);
+    });
+    keys.forEach((k) => {
+      const [step, metric] = k.split('|');
+      const tr = tbody.insertRow();
+      tr.insertCell().textContent = step; tr.insertCell().textContent = metric;
+      runs.forEach((run, i) => {
+        const r = by.get(run + '|' + k), prev = i ? by.get(runs[i - 1] + '|' + k) : null;
+        const td = tr.insertCell(); td.className = 'mono';
+        td.textContent = r ? evalFmt(metric, r.mean) : '·';
+        if (r) td.title = 'scenarios ' + evalFmt(metric, r.low) + ' to ' + evalFmt(metric, r.high);
+        if (r && prev && evalWorse(metric, prev.mean, r.mean)) td.classList.add('worse');
+      });
+    });
+    const t = dash.data('eval_tokens'), size = ob.querySelector('#eval-size');
+    size.textContent = t.status === 'ok' ? t.data.map((r) => r.run_id + ': ' + d3.format('.3~s')(r.tokens) + ' tokens, ' + r.scenarios + ' scenarios × ' + r.runs_per_scenario + ' runs, ' + d3.format('.1f')(r.minutes_per_run) + ' min per run').join(' · ') : '';
+  }
+
+  function drawEvalScenarios(ob) {
+    const tbody = ob.querySelector('#eval-scenario-table tbody');
+    const d = dash.data('eval_scenarios');
+    tbody.replaceChildren();
+    if (d.status !== 'ok') { const tr = tbody.insertRow(); const td = tr.insertCell(); td.colSpan = 7; if (isFail(d.status)) failLine(td); else { td.className = 'dash-skeleton'; td.textContent = '—'; } return; }
+    d.data.forEach((r) => {
+      const tr = tbody.insertRow();
+      const c = (text, cls) => { const td = tr.insertCell(); if (cls) td.className = cls; td.textContent = text; return td; };
+      c(r.scenario, 'mono');
+      const e = c(evalFmt('request_to_done', r.request_to_done), 'mono'); if (r.request_to_done != null && r.request_to_done < 4) e.classList.add('worse');
+      const w = c(evalFmt('meets_expected', r.meets_expected), 'mono'); if (r.meets_expected != null && r.meets_expected < 4) w.classList.add('worse');
+      c(evalFmt('essential_share', r.essential_share), 'mono');
+      c(evalFmt('questions_docs_answer', r.questions_docs_answer), 'mono');
+      c(evalFmt('caveats_honest', r.caveats_honest), 'mono');
+      c(evalFmt('minutes', r.minutes), 'mono');
+    });
+  }
+
+  const evalReason = (v) => {
+    if (typeof v === 'string') return v;
+    if (Array.isArray(v)) return v.map((q) => (q && q.question ? q.question + (q.docs_answer ? ' (the documents answer this)' : '') : JSON.stringify(q))).join('\n');
+    if (v && typeof v === 'object') return Object.entries(v).map(([k, x]) => k + ': ' + (typeof x === 'string' ? x : JSON.stringify(x))).join('\n');
+    return String(v);
+  };
+
+  function drawEvalSteps(ob) {
+    const tbody = ob.querySelector('#eval-step-table tbody'), detail = ob.querySelector('#eval-step-detail');
+    const selS = ob.querySelector('#eval-pick-scenario'), selT = ob.querySelector('#eval-pick-step');
+    const d = dash.data('eval_steps');
+    tbody.replaceChildren(); detail.replaceChildren();
+    if (d.status !== 'ok') { const tr = tbody.insertRow(); const td = tr.insertCell(); td.colSpan = 6; if (isFail(d.status)) failLine(td); else { td.className = 'dash-skeleton'; td.textContent = '—'; } return; }
+    const fill = (sel, values, cur) => {
+      sel.replaceChildren(...['', ...values].map((v) => { const o = document.createElement('option'); o.value = v; o.textContent = v || 'All'; o.selected = v === cur; return o; }));
+    };
+    fill(selS, [...new Set(d.data.map((r) => r.scenario))], evalPick.scenario);
+    fill(selT, evalSteps, evalPick.step);
+    selS.onchange = () => { evalPick.scenario = selS.value; drawEvalSteps(ob); };
+    selT.onchange = () => { evalPick.step = selT.value; drawEvalSteps(ob); };
+    const rows = d.data.filter((r) => (!evalPick.scenario || r.scenario === evalPick.scenario) && (!evalPick.step || r.step === evalPick.step));
+    const keyOf = (r) => r.scenario + '|' + r.run + '|' + r.step;
+    rows.forEach((r) => {
+      const tr = tbody.insertRow(); tr.dataset.key = keyOf(r);
+      if (tr.dataset.key === evalPick.key) tr.classList.add('pick');
+      const c = (text, cls) => { const td = tr.insertCell(); if (cls) td.className = cls; td.textContent = text; return td; };
+      c(r.scenario, 'mono'); c(String(r.run), 'mono'); c(r.step);
+      const done = c(r.completed ? 'Yes' : 'No'); if (!r.completed) done.classList.add('worse');
+      const scores = (evalCriteria[r.step] || []).map((k) => k + ' ' + (r.metrics[k] == null ? '·' : r.metrics[k])).join(' · ');
+      const sc = c(scores, 'mono'); if ((evalCriteria[r.step] || []).some((k) => r.metrics[k] != null && r.metrics[k] <= 3)) sc.classList.add('worse');
+      c(String(r.messages), 'mono');
+      tr.addEventListener('click', () => { evalPick.key = keyOf(r); drawEvalSteps(ob); });
+    });
+    const picked = d.data.find((r) => keyOf(r) === evalPick.key);
+    if (!picked) return;
+    const box = (title, text) => { const div = document.createElement('div'); const h = document.createElement('div'); h.className = 'ob-label'; h.textContent = title; const pre = document.createElement('pre'); pre.textContent = text || '(empty)'; div.append(h, pre); return div; };
+    const reasons = document.createElement('div');
+    const rh = document.createElement('div'); rh.className = 'ob-label'; rh.textContent = 'Judge’s reasons';
+    const ul = document.createElement('ul'); ul.className = 'ev-reasons';
+    Object.entries(picked.reasons).forEach(([k, v]) => { const li = document.createElement('li'); const b = document.createElement('b'); b.textContent = k + (picked.metrics[k] != null ? ' ' + picked.metrics[k] : '') + ': '; li.append(b, evalReason(v)); li.style.whiteSpace = 'pre-wrap'; ul.appendChild(li); });
+    if (!ul.children.length) { const li = document.createElement('li'); li.textContent = 'No judge reasons for this step.'; ul.appendChild(li); }
+    reasons.append(rh, ul);
+    const grid = document.createElement('div'); grid.className = 'ev-detail';
+    grid.append(box('Input · ' + picked.scenario + ' run ' + picked.run + ' · ' + picked.step, picked.input), box('Output', picked.output), reasons);
+    detail.appendChild(grid);
+  }
+
+  function drawAnalysis(ob, source, lists) {
+    const d = dash.data(source);
+    lists.forEach(([part, sel]) => {
+      const list = ob.querySelector(sel);
+      list.replaceChildren();
+      if (isFail(d.status) || d.status === 'missing') { failLine(list); return; }
+      if (d.status !== 'ok') return;
+      d.data.filter((r) => r.part === part).forEach((r) => {
+        const li = document.createElement('li');
+        const head = document.createElement('div');
+        const t = document.createElement('span'); t.className = 't'; t.textContent = r.name;
+        const n = document.createElement('span'); n.className = 'n'; n.textContent = fmtCount(r.run_count) + ' of ' + fmtCount(r.runs_total) + ' runs';
+        head.append(t, n);
+        const ul = document.createElement('ul'); ul.style.margin = '4px 0 0'; ul.style.paddingLeft = '18px';
+        r.bullets.forEach((b) => { const bi = document.createElement('li'); bi.textContent = b; ul.appendChild(bi); });
+        li.append(head, ul); list.appendChild(li);
+      });
+    });
+  }
+  const drawEvalAnalysis = (ob) => drawAnalysis(ob, 'eval_analysis', [['topics', '#eval-topic-list'], ['confusion', '#eval-confusion-list']]);
+
+  function drawEval() {
+    const ob = evalRoot(); if (!ob) return;
+    drawEvalHead(ob); drawEvalRuns(ob); drawEvalScenarios(ob); drawEvalAnalysis(ob); drawEvalSteps(ob);
+  }
+
+  // ---------- Tabs ----------
+  const usage = page.querySelector('#usage'), obsSec = page.querySelector('#observability'), evalSec = page.querySelector('#eval');
+  const tabBtns = page.querySelectorAll('.dw-tab');
+  let current = 'usage';
+  function show(name, user) {
+    current = ['observability', 'eval'].includes(name) ? name : 'usage';
+    if (current === 'observability' && !obsSec.firstElementChild) {
+      obsSec.appendChild(document.getElementById('tpl-obs').content.cloneNode(true));
+    }
+    if (current === 'eval' && !evalSec.firstElementChild) {
+      evalSec.appendChild(document.getElementById('tpl-eval').content.cloneNode(true));
+    }
+    usage.hidden = current !== 'usage'; obsSec.hidden = current !== 'observability'; evalSec.hidden = current !== 'eval';
+    tabBtns.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === current)));
+    if (user) dash.setLink(current);
+    redraw();
+  }
+  tabBtns.forEach((b) => b.addEventListener('click', () => show(b.dataset.tab, true)));
+  function redraw() {
+    if (current === 'usage') { drawKpis(); drawFunnel(); drawDaily(); drawTasks(); }
+    else if (current === 'eval') drawEval();
+    else drawObs();
+  }
+  dash.onData(redraw);
+  show(location.hash.slice(1), false);
+
+})();
+</script>
