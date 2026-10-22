@@ -118,16 +118,23 @@ hook carries no reply text, and the plugin does not read the transcript to get i
    `/daily-work:brief hackathon I want to help my colleague visualise different options of a UNS structure …`
    The agent rewrites it into a clear brief (no additions, open points left open), with a
    heading and a file name, and asks for the project if you did not name an existing one.
-   You approve or correct it; only then is `hackathon/briefs/uns-mockup.md` written, and the
-   project folder with it if the project is new.
+   It also lists the brief's open points: terms, sources or choices the glossary,
+   `sources.md` and any earlier task leave unsettled. You approve or correct it; only then is
+   `hackathon/briefs/uns-mockup.md` written, with the open points under `## Open points`, and
+   the project folder with it if the project is new.
+   With no open points it drafts the Spec instead and offers to skip the grill: on yes it
+   writes `hackathon/tasks/<task-name>.md` straight away, and you go on at step 3. You can
+   always grill anyway.
 2. **Grill.** `/mattpocock-skills:grill-with-docs hackathon/briefs/uns-mockup.md` (Matt Pocock's
-   skill). It interviews you until the task is clear, and records terms in `CONTEXT.md` and
-   decisions in `docs/adr/`. When it ends, the generated AGENTS.md has the agent write
-   `hackathon/tasks/uns-mockup.md` and delete the brief: the brief as the Ask, what was
-   settled as the Spec.
-3. **Work.** Tell the agent "work on uns-mockup". Client files go in the project's
-   `inputs/`; what the task produces, code included, goes in the project's `outputs/`.
-4. **Record.** `/daily-work:record uns-mockup` shows the Result and Caveats it drafted and
+   skill). It starts from the brief's open points and interviews you until the task is
+   clear, and records terms in `CONTEXT.md` and decisions in `docs/adr/`. When it ends, the
+   generated AGENTS.md has the agent write `hackathon/tasks/uns-mockup.md` and delete the
+   brief: the brief as the Ask, what was settled as the Spec.
+3. **Work and iterate.** Tell the agent "work on uns-mockup". Client files go in the project's
+   `inputs/`; what the task produces, code included, goes in the project's `outputs/`. Look
+   at the output and say what to change, as often as you like; the agent edits the same file.
+   Coming back another day, "work on uns-mockup" picks up from the task file and `outputs/`.
+4. **Record**, once the work is done. `/daily-work:record uns-mockup` shows the Result and Caveats it drafted and
    asks "Record this?". On yes it writes them, marks the task done in the project README,
    commits, and lists the Done lines a person still has to check. The agent never records on
    its own; when the work is done it asks you to.
@@ -137,11 +144,13 @@ name is enough (`/mattpocock-skills:grill-with-docs uns-mockup` works too), and
 `/daily-work:record` with no argument records the task if only one is open. Full paths are
 accepted everywhere a name is.
 
-**Changing an existing output** is a task like any other: brief it
-(`/daily-work:brief hackathon update the prices in the pitch deck`), grill it, work, record.
+**Changing a recorded output** is a new task: brief it
+(`/daily-work:brief hackathon update the prices in the pitch deck`), work, record.
 `outputs/` belongs to the project, not to a task, so the new task edits
 `hackathon/outputs/pitch-deck.pptx` in place; its brief names the file, and nothing is copied
-or created beside it.
+or created beside it. The brief also finds the task that made the file (the one whose Result
+names it) and writes `Builds on: tasks/pitch-deck.md`, so what that task settled is not asked
+again. A small change usually has no open points and skips the grill.
 
 A repo set up by this plugin (the repo here is called `techseed`), with what makes each part:
 
@@ -185,7 +194,9 @@ All four run only when you ask for them by name.
   `AGENTS.md` when both exist), an existing `.gitignore` only its missing lines. No `CLAUDE.md`
   is created. Safe to re-run.
 - **`/daily-work:brief [project] <describe the task>`** — rewrites the description into a brief,
-  shows it for you to verify, and on approval writes `<project>/briefs/<task-name>.md`, adds
+  lists its open points, shows both for you to verify, and on approval writes
+  `<project>/briefs/<task-name>.md` (or, with no open points and your yes, the task file
+  `<project>/tasks/<task-name>.md` with the Spec it drafted, skipping the grill), adds
   `- <date> <task-name>: open` under `## Tasks` in the project README, and creates the project
   (`README.md`, `sources.md`, `tasks/`, `inputs/`, `outputs/`, its line under `## Projects`)
   if new. It refuses a project name that is already a folder of another kind, such as `tools`.
@@ -288,7 +299,8 @@ it stalls. It is metadata only, it is opt-out, and no personal or machine identi
 sent.
 
 **When.** One event when `/daily-work:brief` writes a brief, one when a grilling writes the
-task file of a brief, and one when `/daily-work:record` commits.
+task file of a brief (or when `/daily-work:brief` writes the task file itself, skipping the
+grill), and one when `/daily-work:record` commits.
 
 **Sent in every event:**
 
@@ -300,7 +312,8 @@ task file of a brief, and one when `/daily-work:record` commits.
 | `install_id` | a random UUID, see below |
 | `task_id` | a random UUID, see below; left out for tasks that have none |
 
-Grill events add `outcome` (`completed`). Nothing else is sent.
+Grill events add `outcome`: `completed`, or `skipped` when the brief skipped the grill.
+Nothing else is sent.
 
 **Never sent by telemetry:** your name, email, git identity, user name, host name or any other personal
 or machine identifier, in clear text or hashed; prompts; file names; paths; project or task

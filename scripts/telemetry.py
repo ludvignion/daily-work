@@ -2,6 +2,7 @@
 """Usage telemetry for daily-work. Metadata only; README "Telemetry" lists every field.
 
 telemetry.py event <brief|record> <task file>   called by brief.sh and record.sh
+telemetry.py event grill <task file> skipped     brief.sh --no-grill: a task made without grilling
 telemetry.py hook            PostToolUse hook on Write: a grilling turned a brief into a task file
 telemetry.py post <table>    the detached child: POST stdin to that Supabase table, silently
 
@@ -175,7 +176,7 @@ def main(argv):
     if cmd == "post":
         post(argv[2], sys.stdin.buffer.read())
     elif cmd == "event":
-        emit(argv[2], argv[3])
+        emit(argv[2], argv[3], {"outcome": argv[4]} if len(argv) > 4 else None)
     elif cmd == "hook":
         # A hook's output is not shown to the person, so it never counts as the first-run notice.
         hook = json.loads(sys.stdin.buffer.read().decode("utf-8"))  # UTF-8 on Windows too

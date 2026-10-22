@@ -117,6 +117,14 @@ class SupabasePayloads(TelemetryCase):
         self.assertEqual(set(grill), base | {"outcome"})
         self.assertEqual((brief["event"], record["event"], grill["outcome"]), ("brief", "record", "completed"))
 
+    def test_a_skipped_grill_is_a_grill_event_with_its_outcome(self):
+        self.emit("brief", self.task)  # first run: the notice
+        telemetry.main(["telemetry.py", "event", "grill", str(self.task), "skipped"])
+        (table, grill), = self.sent
+        self.assertEqual(table, "events")
+        self.assertEqual((grill["event"], grill["outcome"]), ("grill", "skipped"))
+        self.assertLessEqual(set(grill), granted("events"))
+
     def test_values_fit_the_migration(self):
         for _, payload in self.events():
             self.assertLessEqual(set(payload), granted("events"))

@@ -43,8 +43,10 @@ class ScriptCase(unittest.TestCase):
         self.git("add", "-A")
         self.git("commit", "-q", "-m", "start")
 
-    def brief(self, project="acme", task="q3-numbers", text="Q3 numbers\nSum up Q3 sales for the board."):
-        return self.run_script("brief.sh", project, task, stdin=text)
+    def brief(self, project="acme", task="q3-numbers", text="Q3 numbers\nSum up Q3 sales for the board.",
+              builds_on=None, no_grill=False):
+        args = ["--no-grill"] * no_grill + [project, task] + [builds_on] * bool(builds_on)
+        return self.run_script("brief.sh", *args, stdin=text)
 
     def grill(self, project="acme", task="q3-numbers"):
         """What a grilling session leaves behind: the task file, and no brief."""
@@ -202,6 +204,56 @@ class Brief(ScriptCase):
         code, out = self.brief()
         self.assertEqual(code, 1)
         self.assertIn("acme/tasks/q3-numbers.md already exists", out)
+
+    def test_open_points_and_builds_on_go_into_the_brief(self):
+        self.brief()
+        self.grill()
+        code, out = self.brief(task="q3-prices", text="Q3 prices\nPrices ex-VAT.\n\n## Open points\n1. Which VAT rate?",
+                               builds_on="q3-numbers")
+        self.assertEqual(code, 0, out)
+        brief = self.read("acme/briefs/q3-prices.md")
+        self.assertIn("\nId: ", brief)
+        self.assertIn("\nBuilds on: tasks/q3-numbers.md\n\nPrices ex-VAT.\n\n## Open points\n1. Which VAT rate?\n", brief)
+        self.assertIn("Next: run the grill-with-docs skill on acme/briefs/q3-prices.md", out)
+
+    def test_refuses_to_build_on_a_task_that_is_not_there(self):
+        self.brief()  # a brief, not yet a task
+        code, out = self.brief(task="q3-prices", text="Q3 prices\nx", builds_on="q3-numbers")
+        self.assertEqual(code, 1)
+        self.assertIn("builds-on: acme/tasks/q3-numbers.md not found", out)
+        self.assertFalse((self.dir / "acme" / "briefs" / "q3-prices.md").exists())
+
+    def test_no_grill_writes_the_task_file_and_no_brief(self):
+        self.brief()
+        self.grill()
+        code, out = self.brief(task="q3-prices", builds_on="q3-numbers", no_grill=True, text=(
+            "Q3 prices\nPrices ex-VAT.\nOutput: update outputs/q3.md\n\n## Spec\n"
+            "Purpose: the board sees Q3 sales ex-VAT.\nDone looks like:\n- every price is 20% lower\n"
+            "Decided:\n- stated: ex-VAT\nOut of scope:\n- the totals"))
+        self.assertEqual(code, 0, out)
+        self.assertFalse((self.dir / "acme" / "briefs" / "q3-prices.md").exists())
+        task = self.read("acme/tasks/q3-prices.md")
+        self.assertRegex(task, r"^# Q3 prices\n\nProject: acme\nCreated: 2026-03-02\nId: \S+\n"
+                               r"Builds on: tasks/q3-numbers\.md\n\n## Ask\n\nPrices ex-VAT\.\n"
+                               r"Output: update outputs/q3\.md\n\n## Spec\n\nPurpose: ")
+        self.assertIn("- every price is 20% lower\n", task)
+        self.assertEqual(task.count(PLACEHOLDER), 2)
+        self.assertIn("- 2026-03-02 q3-prices: open", self.read("acme/README.md"))
+        self.assertIn("Created acme/tasks/q3-prices.md", out)
+        self.assertTrue(out.rstrip().endswith("Next: work on q3-prices"))
+        _, listed = self.run_script("record.sh", "list")
+        self.assertIn("acme/tasks/q3-prices.md\n", listed)
+        code, out = self.run_script("record.sh", "begin", "q3-prices")
+        self.assertEqual(code, 0, out)
+
+    def test_no_grill_refuses_without_a_spec_or_its_done_lines(self):
+        for text, message in [("T\nPrices ex-VAT.", "needs a ## Spec section"),
+                              ("T\nPrices ex-VAT.\n\n## Spec\nPurpose: x\nDone looks like:\nDecided:\n- y",
+                               "no Done looks like: lines")]:
+            code, out = self.brief(task="q3-prices", text=text, no_grill=True)
+            self.assertEqual(code, 1)
+            self.assertIn(message, out)
+        self.assertFalse((self.dir / "acme").exists())
 
     def test_refuses_a_folder_that_is_not_a_project(self):
         (self.dir / "docs").mkdir()

@@ -92,26 +92,34 @@ All inside Claude Code, in your work repo:
 1. **Describe it.**
    `/daily-work:brief <project> <what you want, in your own words>`
    The project is an engagement, a system or a responsibility, e.g. `acme`. Claude rewrites
-   your text into a brief, picks a short task name for its file (e.g. `q3-review`), and
-   shows both. Answer "yes" or say what to change.
-2. **Grill it.**
+   your text into a brief, picks a short task name for its file (e.g. `q3-review`), lists
+   what is still open, and shows all three. Answer "yes" or say what to change.
+2. **Grill it**, if anything is open.
    Paste the `Next:` line step 1 printed, or type
    `/mattpocock-skills:grill-with-docs <task-name>`.
    Answer the questions. At the end, Claude writes `<project>/tasks/<task-name>.md` with
    what was settled.
+   If nothing was open, step 1 offered to skip this: answer "yes" and it writes the task
+   file itself.
 3. **Add files.** Put the client's files (decks, spreadsheets, PDFs) in the project's
    `inputs/` folder. Open it from your file manager, or ask Claude where it is.
-4. **Do the work.** "Work on <task-name>". Results land in the project's `outputs/`.
-5. **Close it.**
+4. **Do the work and iterate.** "Work on <task-name>". Results land in the project's
+   `outputs/`. Look at them and say what to change, in plain words, as often as you like;
+   Claude edits the same file. Coming back another day, "work on <task-name>" picks up
+   where you left off.
+5. **Close it, once it is done.**
    `/daily-work:record <task-name>`, or just `/daily-work:record` if it is your only open task.
    Claude shows what was done and what to watch out for and asks "Record this?". Answer
    yes; it writes it down, commits, and lists the checks left for you.
 
 With several tasks open, `/daily-work:record` with no argument lists them.
 
-To change something a project already produced, start again at step 1 and say what to
-change ("update the prices in the Q3 review"). The new task edits the file already in
-`outputs/`; it does not make a second one.
+## Changing it later
+
+To change something a recorded task produced, start again at step 1 and say what to change
+("update the prices in the Q3 review"). Claude finds the file and the task that made it, so
+nothing that task settled is asked again; a small change usually skips the grill. The new
+task edits the file already in `outputs/`; it does not make a second one.
 
 ## Everyday use
 

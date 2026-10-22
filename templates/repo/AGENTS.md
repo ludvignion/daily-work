@@ -6,13 +6,15 @@ tasks land here.>
 
 ## Reading order
 Before any task: the glossary if it exists (CONTEXT.md, or GLOSSARY.md), then the project's
-README.md, sources.md and glossary if it has one, then the task file.
+README.md, sources.md and glossary if it has one, then the task file, and the task its
+Builds on: line names if it has one.
 
 ## Where things go
 Work belongs to a project: <project>/ at the repo root, an engagement, a system or a
 recurring responsibility. A project holds briefs/, tasks/, inputs/ and outputs/, side by
 side. A task starts as briefs/<task-name>.md, a person's description of it; grilling turns it
-into tasks/<task-name>.md. Client files go in the project's inputs/ and are never committed.
+into tasks/<task-name>.md. A brief with nothing open skips the grill: /daily-work:brief writes
+the task file straight away. Client files go in the project's inputs/ and are never committed.
 What the tasks produce, code included, goes in the project's outputs/ and is committed.
 
 outputs/ belongs to the project, not to one task. A task that changes something already in
@@ -37,9 +39,12 @@ the question to ask; nothing else is.
 ## When to grill
 Run the grill-with-docs skill (/mattpocock-skills:grill-with-docs in Claude Code) when the
 clarify line shows an undefined term or a missing source, or when the ask is larger than one
-sitting. Otherwise the clarify line is enough.
+sitting. Otherwise the clarify line is enough. For a brief, /daily-work:brief makes this call:
+it lists the open points, and with none it offers to skip the grill.
 
 ## After a grilling session on a brief
+A brief's ## Open points are where the grill starts: ask those first. When the brief has a
+Builds on: line, start the Spec from that task's Spec and ask only about what this brief changes.
 Before ending, turn the brief <project>/briefs/<task-name>.md into a task:
 1. Write <project>/tasks/<task-name>.md, same file name as the brief, in exactly this layout:
 
@@ -48,9 +53,11 @@ Before ending, turn the brief <project>/briefs/<task-name>.md into a task:
    Project: <project>
    Created: <today>
    Id: <the brief's Id line, copied unchanged>
+   Builds on: <the brief's Builds on line, copied unchanged; leave this line out if it has none>
 
    ## Ask
-   <the brief's text, unchanged, without its heading, Project, Written and Id lines>
+   <the brief's text, unchanged, without its heading, Project, Written, Id and Builds on
+   lines and without its ## Open points section>
 
    ## Spec
    Purpose: <one line: who this is for and what they do with it>

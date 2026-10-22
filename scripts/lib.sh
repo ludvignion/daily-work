@@ -54,7 +54,8 @@ new_uuid() {
 }
 
 # Copy template $1 to $2, filling <project>, <slug>, <date>, <title>, <id> from env,
-# and replacing the <description> placeholder line with env ASK.
+# replacing the <description> and <spec> placeholder lines with env ASK and SPEC, and the
+# <builds-on> line with "Builds on: $BUILDS_ON", or dropping it when that is empty.
 fill() {
   mkdir -p "$(dirname "$2")"
   awk '
@@ -64,6 +65,8 @@ fill() {
       return out s
     }
     $0 == "<description>" { print ENVIRON["ASK"]; next }
+    $0 == "<spec>" { print ENVIRON["SPEC"]; next }
+    $0 == "<builds-on>" { if (ENVIRON["BUILDS_ON"] != "") print "Builds on: " ENVIRON["BUILDS_ON"]; next }
     {
       s = sub_all($0, "<project>", ENVIRON["PROJECT"])
       s = sub_all(s, "<slug>", ENVIRON["SLUG"])
