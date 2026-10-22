@@ -2,7 +2,8 @@
 """Judge real sessions afterwards, in a batch: every brief, grill and record run in the Supabase
 table content that has no score yet is scored by the judge model on the rubric for its skill
 (config.json, session_rubrics), and the runs judged in the last days are grouped into topics and
-confusion. Scores go to session_scores, the analysis to session_analysis.
+confusion, with suggested changes to the plugin. Scores go to session_scores, the analysis to
+session_analysis.
 
 python3 evals/sessions.py [--target live|test] [--limit 50] [--days 7] [--dry-run]
 
@@ -35,6 +36,9 @@ import scoring
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 CUT = 2500
+# Topics and confusion, as in the eval's analysis, and the plugin changes they point to.
+PARTS = analyse.PARTS + ("suggestions",)
+SHAPE = {part: [{"name": "short name of the kind", "runs": ["skill/id"], "bullets": ["one sentence"]}] for part in PARTS}
 
 JUDGE = """You judge one run of the {skill} step of daily-work, a plugin that turns a person's
 request into a brief, grills them into a task file and records the result. You see only the
@@ -58,11 +62,17 @@ ANALYSE = """You are analysing real sessions of daily-work, a plugin that turns 
 into a brief, grills them into a task file and records the result. Below are {n} skill runs: for
 each, the step, the judge's scores (1 to 5) with reasons, and the conversation.
 
-Write two parts.
+Write three parts.
 
 topics: the kinds of things the sessions dealt with, at most {groups} kinds, and how the
 plugin handled each. confusion: the moments where the plugin and the person did not understand
 each other, or the plugin did not follow its own steps, at most {groups} kinds.
+
+suggestions: changes to the plugin that would remove the confusion or lift the lowest scores,
+at most {groups}, the one that would help most runs first. The name says the change in a few
+words, as an instruction ("Ask fewer questions per grill round"). Its {bullets} bullets say, in
+this order: what to change; where (brief, grill, work or record, and which instruction); and
+which confusion or low score it answers. Suggest only what the runs below show a need for.
 
 Every kind has exactly {bullets} bullets. Each bullet is one short plain sentence of at most
 {words} words about the plugin's behaviour, specific enough to act on. Never quote or repeat
@@ -216,10 +226,10 @@ def main():
         return
     parts = [material(r, by_row[r["id"]]) for r in picked]
     prompt = ANALYSE.format(n=len(parts), groups=analyse.MAX_GROUPS, bullets=analyse.BULLETS, words=analyse.MAX_WORDS,
-                            shape=json.dumps(analyse.SHAPE, indent=2), materials="\n\n".join(parts))
+                            shape=json.dumps(SHAPE, indent=2), materials="\n\n".join(parts))
     for attempt in (1, 2, 3):
         try:
-            result = analyse.check(ask(prompt, cfg, logs / f"analyse-{attempt}") or {}, {run_id(r) for r in picked})
+            result = analyse.check(ask(prompt, cfg, logs / f"analyse-{attempt}") or {}, {run_id(r) for r in picked}, PARTS)
             break
         except ValueError as e:
             error = e
@@ -228,7 +238,8 @@ def main():
         refuse(f"no usable analysis: {error}")
     db.insert("session_analysis", [{"period_start": since.isoformat(), "period_end": datetime.now(timezone.utc).isoformat(),
                                     "runs": len(picked), "judge_model": cfg["models"]["judge"], **result}])
-    print(f"analysis of {len(picked)} runs: {len(result['topics'])} topics, {len(result['confusion'])} kinds of confusion")
+    print(f"analysis of {len(picked)} runs: {len(result['topics'])} topics, {len(result['confusion'])} kinds of confusion, "
+          f"{len(result['suggestions'])} suggestions")
 
 
 if __name__ == "__main__":

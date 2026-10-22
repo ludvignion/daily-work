@@ -66,12 +66,12 @@ def material(name, run, record, scores, request):
     return "\n".join(lines)
 
 
-def check(parsed, known_runs):
-    """The analysis as the dashboard reads it: both parts, at most MAX_GROUPS kinds of exactly
+def check(parsed, known_runs, parts=PARTS):
+    """The analysis as the dashboard reads it: every part, at most MAX_GROUPS kinds of exactly
     BULLETS bullets of at most MAX_WORDS words, and only runs that exist. Refuses a reply that
     breaks any of it, so the call is made again."""
     out = {}
-    for part in PARTS:
+    for part in parts:
         groups = parsed.get(part)
         if not isinstance(groups, list) or not groups:
             raise ValueError(f"analysis has no list '{part}'")

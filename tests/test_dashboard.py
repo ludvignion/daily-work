@@ -39,6 +39,16 @@ class Analysis(unittest.TestCase):
         with self.assertRaises(ValueError):
             analyse.check({"topics": [{"name": "x", "bullets": ["a", "b", "c"]}]}, set())
 
+    def test_sessions_ask_for_suggestions_and_refuse_a_reply_without_them(self):
+        ok = {"name": "x", "runs": ["grill/7"], "bullets": ["a", "b", "c"]}
+        self.assertEqual(sessions.PARTS, ("topics", "confusion", "suggestions"))
+        self.assertEqual(set(sessions.SHAPE), set(sessions.PARTS))
+        self.assertIn("suggestions:", sessions.ANALYSE)
+        out = analyse.check({"topics": [ok], "confusion": [ok], "suggestions": [ok]}, {"grill/7"}, sessions.PARTS)
+        self.assertEqual(out["suggestions"], [ok])
+        with self.assertRaises(ValueError):
+            analyse.check({"topics": [ok], "confusion": [ok]}, {"grill/7"}, sessions.PARTS)
+
     def test_material_names_the_run_and_every_step(self):
         record = {"transcripts": {"grill": [{"role": "assistant", "text": "Who reads it?"}]}}
         scores = {"metrics": {"work": {"completed": 0}}, "reasons": {"work": {"meets_task": "nothing written"}}}
@@ -121,9 +131,11 @@ class Build(unittest.TestCase):
             for name in build.LIVE:
                 sql = [l for l in (REPO / "dashboard" / "queries" / f"{name}.sql").read_text().splitlines() if not l.startswith("--")][0]
                 self.assertNotIn("public.", sql)
-                self.assertIn(f"create or replace view {schema}.dashboard_{name} with (security_invoker = true) as\n"
-                              f"{sql.replace('live.', schema + '.')}", migration)
-                self.assertIn(f"revoke all on {schema}.dashboard_{name} from anon, authenticated;", migration)
+                # The view as the latest migration that defines it leaves it.
+                head = f"create or replace view {schema}.dashboard_{name} with (security_invoker = true) as\n"
+                latest = [m.read_text() for m in sorted((REPO / "supabase" / "migrations").glob("*.sql")) if head in m.read_text()][-1]
+                self.assertEqual(latest.split(head)[-1].split("\n")[0], sql.replace("live.", schema + "."), f"{schema}.{name}")
+                self.assertIn(f"revoke all on {schema}.dashboard_{name} from anon, authenticated;", latest)
         # anon may insert into the tables the plugin and the eval write, nothing else
         grants = re.findall(r"grant insert \([^)]*\)\s+on (\w+\.\w+) to anon", migration)
         self.assertEqual(sorted(grants), ["live.content", "live.events", "live.feedback", "test.content",

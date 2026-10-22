@@ -59,7 +59,7 @@ hold nothing from real sessions.
 | `versions` | `queries/versions.sql` | Observability: release marks on the hourly chart |
 | `traces` | `queries/traces.sql` | Observability: task traces |
 | `judge` | `queries/judge.sql` (`session_scores`) | Observability: LLM judge |
-| `session_analysis` | `queries/session_analysis.sql` | Observability: topics and confusion |
+| `session_analysis` | `queries/session_analysis.sql` | Observability: topics, confusion and suggestions (column `part`) |
 | `grill_questions` | attached file `grill_questions_v2.json` | Observability: what grill asks |
 | `grill_themes` | attached file `grill_themes.json` | Observability: what grill asks |
 | `grill_topics`, `grill_summary` | worked out in the page from the two above | Observability: what grill asks |

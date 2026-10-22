@@ -168,7 +168,9 @@ the eval's simulated sessions and your own tries with `DAILY_WORK_TARGET=test`.
 1. Every brief, grill and record run in the table `content` that has no score yet is scored 1
    to 5 on the rubric for its skill (`session_rubrics` in `config.json`), into `session_scores`.
 2. The runs judged in the last `--days` are grouped into topics and confusion, three bullets
-   each as for the eval, into `session_analysis`.
+   each as for the eval, plus suggestions: changes to the plugin, each named as an instruction,
+   with three bullets for what to change, where, and which confusion or low score it answers.
+   All three go into one `session_analysis` row (`topics`, `confusion`, `suggestions`).
 
 The judge sees what `content` holds: the person's prompts, the assistant's replies and the
 names of the files written, not their contents. So the rubric is about the conversation (were
