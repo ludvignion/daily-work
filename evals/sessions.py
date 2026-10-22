@@ -4,10 +4,10 @@ table content that has no score yet is scored by the judge model on the rubric f
 (config.json, session_rubrics), and the runs judged in the last days are grouped into topics and
 confusion. Scores go to session_scores, the analysis to session_analysis.
 
-python3 evals/sessions.py [--target real|test] [--limit 50] [--days 7] [--dry-run]
+python3 evals/sessions.py [--target live|test] [--limit 50] [--days 7] [--dry-run]
 
---target test judges the test group (schema sim: the eval's simulated sessions and your own
-tries with DAILY_WORK_TARGET=test) instead of real use (schema public, the default).
+--target test judges the test group (schema test: the eval's simulated sessions and your own
+tries with DAILY_WORK_TARGET=test) instead of real use (schema live, the default).
 
 Reads and writes with the secret key from the environment variable SUPABASE_SERVICE_KEY, so run
 it in your own terminal or as a scheduled job; never put the key in a file. Run it at least
@@ -117,16 +117,16 @@ def material(row, score):
 
 # --- Supabase, with the secret key ---
 
-SCHEMAS = {"real": "public", "test": "sim"}
+SCHEMAS = {"live": "live", "test": "test"}
 
 
 class Supabase:
-    def __init__(self, target="real"):
+    def __init__(self, target="live"):
         key = os.environ.get("SUPABASE_SERVICE_KEY")
         if not key:
             refuse("SUPABASE_SERVICE_KEY is not set; this batch reads content, which only the secret key can")
         self.url = json.loads((ROOT / "telemetry.json").read_text())["url"].rstrip("/")
-        # The profile headers pick the schema: the same tables exist in public and in sim.
+        # The profile headers pick the schema: the same tables exist in live and in test.
         self.schema = SCHEMAS[target]
         self.headers = {"apikey": key, "Content-Type": "application/json",
                         "Accept-Profile": self.schema, "Content-Profile": self.schema}
@@ -179,8 +179,8 @@ def ask(prompt, cfg, log):
 
 def main():
     parser = argparse.ArgumentParser(description="Judge real sessions from the content table.")
-    parser.add_argument("--target", choices=sorted(SCHEMAS), default="real",
-                        help="real: schema public, real use (default); test: schema sim, test sessions")
+    parser.add_argument("--target", choices=sorted(SCHEMAS), default="live",
+                        help="live: real use (default); test: test sessions")
     parser.add_argument("--limit", type=int, default=50, help="most runs to judge in one batch (default 50)")
     parser.add_argument("--days", type=int, default=7, help="analyse the runs judged in this many days (default 7)")
     parser.add_argument("--dry-run", action="store_true", help="say how many runs wait, judge nothing")

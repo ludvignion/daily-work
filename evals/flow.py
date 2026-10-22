@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FLOW = ["brief", "grill", "work", "record"]
-# Simulated sessions send telemetry and content like real ones, but to the test group (schema sim).
+# Simulated sessions send telemetry and content like real ones, but to the test group (schema test).
 TEST_GROUP = {"DAILY_WORK_TARGET": "test", "DAILY_WORK_TELEMETRY": "1", "DAILY_WORK_CONTENT": "1"}
 MAX_FILE = 60000
 # tokens is the sum of the other three. Cached input is most of it and much the cheapest.

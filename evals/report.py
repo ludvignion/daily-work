@@ -172,7 +172,9 @@ def insert(table, rows):
     config = json.loads((ROOT / "telemetry.json").read_text())
     request = urllib.request.Request(
         f"{config['url'].rstrip('/')}/rest/v1/{table}", data=json.dumps(rows).encode(), method="POST",
-        headers={"apikey": config["anon_key"], "Content-Type": "application/json", "Prefer": "return=minimal"})
+        # The eval's tables live in the test group, with its simulated sessions.
+        headers={"apikey": config["anon_key"], "Content-Type": "application/json", "Content-Profile": "test",
+                 "Prefer": "return=minimal"})
     try:
         with urllib.request.urlopen(request, timeout=60):
             pass

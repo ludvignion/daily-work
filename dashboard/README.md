@@ -28,23 +28,23 @@ The Usage and Observability tabs read real sessions, so they stay empty, marked 
 load", unless the secret key is set:
 
 ```
-SUPABASE_SERVICE_KEY=<secret key> python3 dashboard/build.py [--target real|test]
+SUPABASE_SERVICE_KEY=<secret key> python3 dashboard/build.py [--target live|test]
 ```
 
-`--target real` (the default) shows real use, schema `public`; `--target test` shows the test
-group, schema `sim`: the eval's simulated sessions and your own tries with
+`--target live` (the default) shows real use, schema `live`; `--target test` shows the test
+group, schema `test`: the eval's simulated sessions and your own tries with
 `DAILY_WORK_TARGET=test`.
 
 Then the build reads the views `dashboard_<source>` in Supabase, one per query in `queries/`
-(`supabase/migrations/20261014030000_dashboard_views.sql`), and the page's own loaders read
+(`supabase/migrations/20261022000000_live_and_test.sql`), and the page's own loaders read
 the rows as on claude.ai. Only the secret key can read those views. The file is then a snapshot
 of real sessions, including the judge's reasons: it is git-ignored, and the 30-day cleanup in
 Supabase does not reach it, so rebuild or delete it. "What grill asks" stays empty: its two
 attached files are not here.
 
-The Usage and Observability queries read `public.events` and leave out the test install
-`11111111-1111-4111-8111-111111111111`. The Eval queries read only `public.eval_runs` and
-`public.eval_steps`, which hold nothing from real sessions.
+The Usage and Observability queries read `live.events` (and, for the test group's views, the
+same tables in `test`). The Eval queries read only `test.eval_runs` and `test.eval_steps`, which
+hold nothing from real sessions.
 
 ## Data sources
 

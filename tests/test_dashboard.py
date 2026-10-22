@@ -110,30 +110,37 @@ class Build(unittest.TestCase):
         self.assertEqual([r["scenario"] for r in rows], ["b", "a"])
         self.assertEqual((rows[0]["request_to_done"], rows[0]["meets_expected"], rows[0]["minutes"]), (3.0, 5.0, 2.0))
 
-    def test_views_are_the_queries_unchanged(self):
-        migration = (REPO / "supabase" / "migrations" / "20261014030000_dashboard_views.sql").read_text()
-        for name in build.LIVE:
-            sql = [l for l in (REPO / "dashboard" / "queries" / f"{name}.sql").read_text().splitlines() if not l.startswith("--")][0]
-            self.assertIn(f"create or replace view public.dashboard_{name} with (security_invoker = true) as\n{sql}", migration)
-            self.assertIn(f"revoke all on public.dashboard_{name} from anon, authenticated;", migration)
+    def test_live_and_test_have_the_tables_and_the_views_of_the_queries(self):
+        migration = (REPO / "supabase" / "migrations" / "20261022000000_live_and_test.sql").read_text()
+        tables = {"live": ["events", "content", "feedback", "session_scores", "session_analysis"]}
+        tables["test"] = tables["live"] + ["eval_runs", "eval_steps"]
+        for schema, names in tables.items():
+            for table in names:
+                self.assertIn(f"create table if not exists {schema}.{table}", migration)
+                self.assertIn(f"alter table {schema}.{table} ", migration)
+            for name in build.LIVE:
+                sql = [l for l in (REPO / "dashboard" / "queries" / f"{name}.sql").read_text().splitlines() if not l.startswith("--")][0]
+                self.assertNotIn("public.", sql)
+                self.assertIn(f"create or replace view {schema}.dashboard_{name} with (security_invoker = true) as\n"
+                              f"{sql.replace('live.', schema + '.')}", migration)
+                self.assertIn(f"revoke all on {schema}.dashboard_{name} from anon, authenticated;", migration)
+        # anon may insert into the tables the plugin and the eval write, nothing else
+        grants = re.findall(r"grant insert \([^)]*\)\s+on (\w+\.\w+) to anon", migration)
+        self.assertEqual(sorted(grants), ["live.content", "live.events", "live.feedback", "test.content",
+                                          "test.eval_runs", "test.eval_steps", "test.events", "test.feedback"])
 
-    def test_sim_has_the_same_tables_and_views(self):
-        migration = (REPO / "supabase" / "migrations" / "20261014040000_sim_schema.sql").read_text()
-        for table in ("events", "content", "feedback", "session_scores", "session_analysis"):
-            self.assertIn(f"create table if not exists sim.{table}", migration)
-            self.assertIn(f"alter table sim.{table}", migration)
+    def test_the_drop_migration_leaves_no_old_table(self):
+        migration = (REPO / "supabase" / "migrations" / "20261022010000_drop_public_and_sim.sql").read_text()
+        self.assertIn("drop schema if exists sim cascade;", migration)
+        for table in ("events", "content", "feedback", "session_scores", "session_analysis", "eval_runs", "eval_steps"):
+            self.assertIn(f"public.{table}", migration)
         for name in build.LIVE:
-            sql = [l for l in (REPO / "dashboard" / "queries" / f"{name}.sql").read_text().splitlines() if not l.startswith("--")][0]
-            self.assertIn(f"create or replace view sim.dashboard_{name} with (security_invoker = true) as\n{sql.replace('public.', 'sim.')}", migration)
-            self.assertIn(f"revoke all on sim.dashboard_{name} from anon, authenticated;", migration)
-        # anon may insert into the three tables the plugin writes, nothing else
-        grants = re.findall(r"grant insert \([^)]*\)\s+on sim\.(\w+) to anon", migration)
-        self.assertEqual(sorted(grants), ["content", "events", "feedback"])
+            self.assertIn(f"public.dashboard_{name}", migration)
 
     def test_sessions_pick_the_schema(self):
         with mock.patch.dict(os.environ, {"SUPABASE_SERVICE_KEY": "k"}):
-            self.assertEqual(sessions.Supabase("test").headers["Accept-Profile"], "sim")
-            self.assertEqual(sessions.Supabase().headers["Content-Profile"], "public")
+            self.assertEqual(sessions.Supabase("test").headers["Accept-Profile"], "test")
+            self.assertEqual(sessions.Supabase().headers["Content-Profile"], "live")
 
     def test_page_holds_the_live_rows(self):
         html = build.page({}, {"kpis": [{"installs": 2}]})

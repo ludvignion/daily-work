@@ -2,13 +2,13 @@
 """Build dashboard/out/index.html: the dashboard page, standalone, with the Eval tab filled from
 the eval runs saved on this machine. Open the file in a browser; no key and no connection needed.
 
-python3 dashboard/build.py [--target real|test]
+python3 dashboard/build.py [--target live|test]
 
 The runs are those stored in Supabase (a run folder with stored.json), so the page shows what the
 tables eval_runs and eval_steps hold. The Usage and Observability tabs read real sessions through
 the claude.ai Supabase connector; here they stay empty unless SUPABASE_SERVICE_KEY is set: then
 they are read from the dashboard_* views (one per query) into the file, a snapshot of that moment:
-of real use (schema public, the default), or with --target test of the test group (schema sim).
+of real use (schema live, the default), or with --target test of the test group (schema test).
 """
 import argparse
 import json
@@ -92,11 +92,11 @@ def analysis(folder):
 
 
 # The Usage and Observability sources, read from the views in
-# supabase/migrations/20261014030000_dashboard_views.sql: each is the query of the same name.
+# supabase/migrations/20261022000000_live_and_test.sql: each is the query of the same name.
 LIVE = ["kpis", "funnel", "daily", "tasks", "versions", "cycle", "hourly", "traces", "judge", "session_analysis"]
 
 
-def live_rows(target="real"):
+def live_rows(target="live"):
     """Rows of every LIVE view, read with SUPABASE_SERVICE_KEY when it is set; empty otherwise.
     The page's own loaders read them, as they read the claude.ai connector's answer."""
     if not os.environ.get("SUPABASE_SERVICE_KEY"):
@@ -207,7 +207,7 @@ def page(data, live=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Build the standalone dashboard page.")
-    parser.add_argument("--target", choices=["real", "test"], default="real",
+    parser.add_argument("--target", choices=["live", "test"], default="live",
                         help="Usage and Observability from real use (default) or the test group")
     target = parser.parse_args().target
     data, live = datasets(ROOT / "evals" / "runs"), live_rows(target)

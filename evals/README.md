@@ -7,7 +7,8 @@ drop first appears in, and to compare two grill implementations on the same scen
 
 Everything here is simulated data, and it stays apart from real use. Every temporary work repo
 sets `DAILY_WORK_TARGET=test`, so its telemetry and content logging go to the test group, the
-schema `sim` (`sim.events`, `sim.content`, `sim.feedback`), never to the real tables in `public`.
+schema `test` (`test.events`, `test.content`, `test.feedback`), never to the real tables in
+`live`. The eval's own tables, `test.eval_runs` and `test.eval_steps`, are in the test group too.
 A run stops with an error if that switch changed during the run. The simulated sessions can then
 be judged and shown like real ones: `sessions.py --target test`, `build.py --target test`.
 
@@ -157,11 +158,11 @@ steps it names before acting on it. `analyse <run-id>` makes it for a run that h
 `evals/sessions.py` judges real sessions afterwards, in a batch, with the same judge model:
 
 ```
-SUPABASE_SERVICE_KEY=... python3 evals/sessions.py [--target real|test] [--limit 50] [--days 7] [--dry-run]
+SUPABASE_SERVICE_KEY=... python3 evals/sessions.py [--target live|test] [--limit 50] [--days 7] [--dry-run]
 ```
 
-`--target real` (the default) judges real use, the tables in `public`; `--target test` judges
-the test group, the same tables in the schema `sim` (`supabase/migrations/20261014040000_sim_schema.sql`):
+`--target live` (the default) judges real use, the tables in `live`; `--target test` judges
+the test group, the same tables in the schema `test` (`supabase/migrations/20261022000000_live_and_test.sql`):
 the eval's simulated sessions and your own tries with `DAILY_WORK_TARGET=test`.
 
 1. Every brief, grill and record run in the table `content` that has no score yet is scored 1

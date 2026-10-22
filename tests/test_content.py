@@ -18,7 +18,8 @@ import export_content
 import telemetry
 
 MIGRATION = (REPO / "supabase" / "migrations" / "20261012010000_content.sql").read_text()
-GRANTED = {c.strip() for c in re.search(r"grant insert \(([^)]*)\)\s+on public\.content to anon;", MIGRATION).group(1).split(",")}
+LIVE_MIGRATION = (REPO / "supabase" / "migrations" / "20261022000000_live_and_test.sql").read_text()
+GRANTED = {c.strip() for c in re.search(r"grant insert \(([^)]*)\)\s+on live\.content to anon;", LIVE_MIGRATION).group(1).split(",")}
 SESSION = "9594fe37-af3a-4682-a455-d242193f5901"
 
 

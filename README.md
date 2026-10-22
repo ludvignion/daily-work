@@ -288,7 +288,8 @@ If the repo already had a `.claude/settings.json`, init leaves it alone: add the
 yourself.
 
 A third switch, `DAILY_WORK_TARGET`, is for the plugin author's own tries. Set to `test`, it
-sends telemetry and content to the test tables (schema `sim`) instead of the real ones, so
+sends telemetry and content to the test tables (schema `test`) instead of the real ones (schema
+`live`), so
 tries do not mix with real use. Leave it out for real work. Put it in the `env` of a test repo's
 `.claude/settings.local.json`, never in `.env`, which the plugin does not read.
 

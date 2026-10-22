@@ -16,12 +16,13 @@ sys.path.insert(0, str(REPO / "scripts"))
 import telemetry
 
 MIGRATION = (REPO / "supabase" / "migrations" / "20261012000000_telemetry.sql").read_text()
+LIVE_MIGRATION = (REPO / "supabase" / "migrations" / "20261022000000_live_and_test.sql").read_text()
 TASK_ID = "0b9f6a3e-58c1-4a41-9d0c-0d2f3f6f7a11"
 
 
 def granted(table):
-    """The columns the migration lets the anon key insert into a table."""
-    columns = re.search(rf"grant insert \(([^)]*)\)\s+on public\.{table} to anon;", MIGRATION).group(1)
+    """The columns the live group's migration lets the anon key insert into a table."""
+    columns = re.search(rf"grant insert \(([^)]*)\)\s+on live\.{table} to anon;", LIVE_MIGRATION).group(1)
     return {c.strip() for c in columns.split(",")}
 
 
@@ -145,13 +146,13 @@ class SupabasePayloads(TelemetryCase):
         self.assertEqual(r.get_header("Apikey"), "anon-key")
         self.assertEqual(r.get_header("Prefer"), "return=minimal")
         self.assertEqual(r.get_header("Content-type"), "application/json")
-        self.assertEqual(r.get_header("Content-profile"), "public")
+        self.assertEqual(r.get_header("Content-profile"), "live")
 
-    def test_test_sessions_go_to_the_sim_schema(self):
+    def test_test_sessions_go_to_the_test_schema(self):
         with mock.patch.dict(os.environ, {"DAILY_WORK_TARGET": "test"}):
-            self.assertEqual(telemetry.request("events", b"{}").get_header("Content-profile"), "sim")
+            self.assertEqual(telemetry.request("events", b"{}").get_header("Content-profile"), "test")
         with mock.patch.dict(os.environ, {"DAILY_WORK_TARGET": "real"}):
-            self.assertEqual(telemetry.request("events", b"{}").get_header("Content-profile"), "public")
+            self.assertEqual(telemetry.request("events", b"{}").get_header("Content-profile"), "live")
 
     def test_no_rating_is_asked_for_or_sent(self):
         self.assertNotIn("rating", (REPO / "scripts" / "telemetry.py").read_text())
