@@ -20,6 +20,11 @@
         "type": "command",
         "bash": "[ \"${DAILY_WORK_CONTENT:-}\" = 0 ] || bash \"$PLUGIN_ROOT/scripts/run-py.sh\" content.py hook copilot-stop; true",
         "timeoutSec": 5
+      },
+      {
+        "type": "command",
+        "bash": "[ \"${DAILY_WORK_TELEMETRY:-}\" = 0 ] || bash \"$PLUGIN_ROOT/scripts/run-py.sh\" telemetry.py stop; true",
+        "timeoutSec": 5
       }
     ]
   }

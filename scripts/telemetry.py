@@ -4,6 +4,7 @@
 telemetry.py event <brief|record> <task file>   called by brief.sh and record.sh
 telemetry.py event grill <task file> skipped     brief.sh --no-grill: a task made without grilling
 telemetry.py hook            PostToolUse hook on Write: a grilling turned a brief into a task file
+telemetry.py stop            Stop hook: the same for a task file written any other way (Bash, Edit)
 telemetry.py post <table>    the detached child: POST stdin to that Supabase table, silently
 
 Nothing here may break or slow a command: every failure is swallowed, and the POST runs in
@@ -16,7 +17,7 @@ import subprocess
 import sys
 import urllib.request
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -141,9 +142,64 @@ def post(table, body, timeout=3):
 
 
 def emit(event, task, extra=None):
-    if opted_out() or not config() or first_run_notice():
+    if opted_out() or not config():
+        return
+    # A brief waits for its grill event; the grill event, sent or skipped, ends the wait.
+    if event == "brief":
+        mark(task_id(task))
+    elif event == "grill":
+        unmark(task_id(task))
+    if first_run_notice():
         return
     send("events", {"event": event, **common(task), **(extra or {})})
+
+
+# Briefs waiting for their grill event, by task id, so the Stop hook can send it for a task file
+# the Write hook did not see. Kept on this machine only; ids older than PENDING_DAYS are dropped.
+PENDING_DAYS = 30
+
+
+def pending():
+    try:
+        p = json.loads((HOME / "grill-pending.json").read_text())
+        return p if isinstance(p, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_pending(p):
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=PENDING_DAYS)).strftime(TS_FORMAT)
+    HOME.mkdir(parents=True, exist_ok=True)
+    (HOME / "grill-pending.json").write_text(json.dumps({k: v for k, v in p.items() if v >= cutoff}))
+
+
+def mark(tid):
+    if tid:
+        save_pending({**pending(), tid: datetime.now(timezone.utc).strftime(TS_FORMAT)})
+
+
+def unmark(tid):
+    p = pending()
+    if tid in p:
+        del p[tid]
+        save_pending(p)
+
+
+def finished_grills(cwd):
+    """Task files under the repo at cwd whose brief still waits for its grill event: grilled,
+    whichever tool wrote the file."""
+    waiting = pending()
+    if not waiting:
+        return []
+    return [str(f) for f in sorted(Path(cwd).glob("*/tasks/*.md")) if task_id(f) in waiting]
+
+
+def grill_completed(task):
+    """Send the grill event for a task file, once."""
+    tid = task_id(task)
+    unmark(tid)
+    if ready():
+        send("events", {"event": "grill", **common(task), "outcome": "completed"})
 
 
 def grilled_task(hook):
@@ -181,8 +237,15 @@ def main(argv):
         # A hook's output is not shown to the person, so it never counts as the first-run notice.
         hook = json.loads(sys.stdin.buffer.read().decode("utf-8"))  # UTF-8 on Windows too
         task = copilot_grilled_task(hook) if argv[2:] == ["copilot"] else grilled_task(hook)
-        if task and ready():
-            send("events", {"event": "grill", **common(task), "outcome": "completed"})
+        if task:
+            grill_completed(task)
+    elif cmd == "stop":
+        # Claude Code's Stop and Copilot CLI's agentStop both carry the session's cwd.
+        if opted_out():
+            return
+        hook = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+        for task in finished_grills(hook.get("cwd", "")):
+            grill_completed(task)
 
 
 if __name__ == "__main__":

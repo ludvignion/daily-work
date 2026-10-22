@@ -301,7 +301,11 @@ sent.
 
 **When.** One event when `/daily-work:brief` writes a brief, one when a grilling writes the
 task file of a brief (or when `/daily-work:brief` writes the task file itself, skipping the
-grill), and one when `/daily-work:record` commits.
+grill), and one when `/daily-work:record` commits. The grill event is sent when the agent
+writes the task file with its Write tool, or else when the session's turn ends, whichever tool
+wrote it. For that, `~/.config/daily-work/grill-pending.json` lists the random task ids of
+briefs whose grill event has not been sent; it stays on your machine, and ids drop out after 30
+days.
 
 **Sent in every event:**
 

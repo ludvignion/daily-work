@@ -292,6 +292,63 @@ class GrillHook(TelemetryCase):
         self.assertIsNone(telemetry.grilled_task({}))
 
 
+class StopHook(TelemetryCase):
+    """A grill whose task file was written with Bash or Edit, which the Write hook never sees."""
+    def setUp(self):
+        super().setUp()
+        self.task.rename(self.brief)  # before grilling: only the brief, with its Id line
+        self.emit("brief", self.task)  # first run: the notice; the brief now waits for its grill
+        self.sent.clear()
+
+    def stop(self, cwd=None):
+        hook = {"cwd": str(cwd or self.project.parent), "hook_event_name": "Stop"}
+        with mock.patch.object(sys, "stdin", io.TextIOWrapper(io.BytesIO(json.dumps(hook).encode()))):
+            telemetry.main(["telemetry.py", "stop"])
+
+    def grill_by_bash(self):
+        self.brief.rename(self.task)
+
+    def test_a_task_file_written_any_way_sends_its_grill_once(self):
+        self.stop()
+        self.assertEqual(self.sent, [])  # still grilling: no task file yet
+        self.grill_by_bash()
+        self.stop()
+        self.stop()
+        (table, grill), = self.sent
+        self.assertEqual((table, grill["event"], grill["outcome"], grill["task_id"]), ("events", "grill", "completed", TASK_ID))
+
+    def test_the_write_hook_and_the_stop_hook_send_one_event_between_them(self):
+        self.task.write_text(self.brief.read_text())  # Write made the task file; the brief is still there
+        hook = {"cwd": "/", "tool_input": {"file_path": str(self.task)}}
+        with mock.patch.object(sys, "stdin", io.TextIOWrapper(io.BytesIO(json.dumps(hook).encode()))):
+            telemetry.main(["telemetry.py", "hook"])
+        self.brief.unlink()
+        self.stop()
+        self.assertEqual([p["outcome"] for _, p in self.sent], ["completed"])
+
+    def test_a_skipped_grill_is_not_sent_again_as_completed(self):
+        self.grill_by_bash()  # brief.sh --no-grill writes the task file itself
+        telemetry.main(["telemetry.py", "event", "grill", str(self.task), "skipped"])
+        self.stop()
+        self.assertEqual([p["outcome"] for _, p in self.sent], ["skipped"])
+
+    def test_an_older_task_without_a_waiting_brief_sends_nothing(self):
+        telemetry.unmark(TASK_ID)
+        self.grill_by_bash()
+        self.stop()
+        self.assertEqual(self.sent, [])
+
+    def test_opted_out_sends_nothing(self):
+        self.grill_by_bash()
+        with mock.patch.dict(os.environ, {"DAILY_WORK_TELEMETRY": "0"}):
+            self.stop()
+        self.assertEqual(self.sent, [])
+
+    def test_waiting_briefs_older_than_the_limit_are_dropped(self):
+        telemetry.save_pending({TASK_ID: "2000-01-01T00:00:00Z"})
+        self.assertEqual(telemetry.pending(), {})
+
+
 class CopilotGrillHook(TelemetryCase):
     def hook(self, patch, tool="apply_patch"):
         return {"sessionId": "s", "cwd": str(self.project.parent), "toolName": tool, "toolArgs": patch}
